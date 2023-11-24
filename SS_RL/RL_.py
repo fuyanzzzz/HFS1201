@@ -36,7 +36,7 @@ action_set = ['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswap0
 EPSILON = 0.9
 # ALPHA = 0.1
 ALPHA = 0.05
-GAMMA = 1
+GAMMA = 0.9
 MAX_EPISODES = 15
 FRESH_TIME = 0.3
 TerminalFlag = "terminal"
@@ -133,30 +133,30 @@ class RL_Q():
         return state
 
     def get_reward(self, cur_best_opt,impro_degree,diversity_degree):
-        # if self.best_opt == 0:
-        #     impor = (self.best_opt - cur_best_opt) / 1
-        # else:
-        #     impor = (self.best_opt - cur_best_opt) / self.best_opt
-        #
-        # if self.trial == 0:
-        #     reward = math.exp((impor + impro_degree + diversity_degree)/2)
-        # else:
-        #     reward = -math.exp((impro_degree + diversity_degree)/2)
+        if self.best_opt == 0:
+            impor = (self.best_opt - cur_best_opt) / 1
+        else:
+            impor = (self.best_opt - cur_best_opt) / self.best_opt
+
+        if self.trial == 0:
+            reward = math.exp((impor + impro_degree + diversity_degree)/2)
+        else:
+            reward = -math.exp((impro_degree + diversity_degree)/2)
         # if np.isnan(reward):
         #     print(True)
         # if self.trial > 50:
         #     reward = -math.exp(1)
-        if self.inital_obj == 0:
-            reward = 0
-        elif self.best_opt >= cur_best_opt:
-            reward = (self.best_opt - cur_best_opt) / (self.inital_obj - self.config.ture_opt)
-        else:
-            reward = 0
-        if reward < 0:
-            reward = (self.best_opt - cur_best_opt) / self.config.ture_opt
-            fp = open('./time_cost.txt', 'a+')
-            print('{0}   {1}   {2}    {3}     {4}'.format(self.file_name,self.best_opt,cur_best_opt,self.inital_obj,self.config.ture_opt), file=fp)
-            fp.close()
+        # if self.inital_obj == 0:
+        #     reward = 0
+        # elif self.best_opt >= cur_best_opt:
+        #     reward = (self.best_opt - cur_best_opt) / (self.inital_obj - self.config.ture_opt)
+        # else:
+        #     reward = 0
+        # if reward < 0:
+        #     reward = (self.best_opt - cur_best_opt) / self.config.ture_opt
+        #     fp = open('./time_cost.txt', 'a+')
+        #     print('{0}   {1}   {2}    {3}     {4}'.format(self.file_name,self.best_opt,cur_best_opt,self.inital_obj,self.config.ture_opt), file=fp)
+        #     fp.close()
 
             # 这是一个注释
             # diag = job_diagram(self.inital_refset[0][0], self.inital_refset[0][2], self.file_name, 2)
@@ -382,11 +382,25 @@ class RL_Q():
             S = S_
             step_counter += 1
         delta = np.linalg.norm(q_target - q_predict)
-        if self.inital_obj - self.config.ture_opt < 0:
-            CUM_REWARD += 1
+        # if self.inital_obj - self.config.ture_opt < 0:
+        #     CUM_REWARD += 1
 
         return copy.deepcopy(self.inital_refset), self.q_table,delta,CUM_REWARD
 
+    def rl_execute(self):
+        step_counter = 0
+        S = 0  # 初始状态为0
+        CUM_REWARD = 0
+
+        self.max_iter = 0
+        while self.max_iter < 2:
+            A = self.choose_action(S, self.q_table)
+            S_, R = self.step(S, A)
+            CUM_REWARD += R
+            S = S_
+            step_counter += 1
+
+        return min([self.inital_refset[i][1] for i in range(len(self.inital_refset))])
 
 # if __name__ == '__main__':
 #     rlll = RL_Q(8, ACTIONS)
