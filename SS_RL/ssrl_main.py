@@ -19,19 +19,19 @@ path = r'C:\paper_code_0501\HFS1201\useful0424\data'
 from config import DataInfo
 from SS_RL.RL_ import RL_Q
 from SS_RL.inital_solution import HFS
-from SS_RL.schedule_cal import ScheduleCal
+# from SS_RL.schedule_cal import ScheduleCal
 import matplotlib.pyplot as plt
 
 
 N_STATES = 8
 ACTIONS = ['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswap0','effeswap1','randswap0','randswap1']
 # 1. 生成初始解，这个没有问题
-actions = range(7)
+actions = range(16)
 max_iter = 3
 
 
 q_table = pd.DataFrame(
-            np.zeros((N_STATES, len(actions))),columns=actions)
+            np.zeros((12, 16)),columns=actions)
 
 
 data_folder = "data"  # 数据文件夹的路径
@@ -58,8 +58,8 @@ while True:
 
         start_time = time.time()
 
-        if index == 0:
-            continue
+        # if index == 0:
+        #     continue
         print('换数据集啦{0}'.format(file_name))
         print('第{0}幕'.format(index))
         hfs = HFS(file_name)

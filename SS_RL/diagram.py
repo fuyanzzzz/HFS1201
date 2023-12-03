@@ -156,6 +156,6 @@ class job_diagram():
         # # 添加备注信息
         # ax.text(0.5, -10, "[[3, 5, 8, 1, 6]]", ha='center', va='center', fontsize=12)
         # ax.text(0.5, -10, "[[9], [4, 7, 0, 2]]", ha='center', va='center', fontsize=12)
-        plt.savefig('./img0629/pic-{}.png'.format(int(self.epoch)))
-        plt.show()
+        # plt.savefig('./img0629/pic-{}.png'.format(int(self.epoch)))
+        # plt.show()
 

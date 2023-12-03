@@ -16,8 +16,8 @@ class DataInfo():
         self.total_mahcine_num = None
         self.ect_weight = None
         self.ddl_weight = None
-        self.ddl_windows = None
         self.ect_windows = None
+        self.ddl_windows = None
         self.machine_num_on_stage = []
 
         self.init_params()
