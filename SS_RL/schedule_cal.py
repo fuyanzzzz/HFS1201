@@ -13,7 +13,7 @@ class ScheduleCal():
         self.recal()
         self.cal()
         diag = job_diagram(self.schedule, self.job_execute_time, file_name, 3)
-        diag.pre()
+        # diag.pre()
         self.idle_time_insertion()
 
     def gen_job_execute_time(self):

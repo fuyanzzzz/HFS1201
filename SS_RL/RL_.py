@@ -77,7 +77,7 @@ class RL_Q():
                         'effe_insert_same_IP_1','effe_swap_same_IP_1','effe_insert_other_IP_1','effe_swap_other_IP_1',
                         'effe_insert_same_AF_1', 'effe_swap_same_AF_1','effe_insert_other_AF_1', 'effe_swap_other_AF_1',
                         'effe_insert_same_AW_1','effe_swap_same_AW_1','effe_insert_other_AW_1','effe_swap_other_AW_1',
-                        'effe_insert_same_AP_1', 'effe_swap_same_AP_1','effe_insert_other_APe_1', 'effe_swap_other_AP_1',
+                        'effe_insert_same_AP_1', 'effe_swap_same_AP_1','effe_insert_other_AP_1', 'effe_swap_other_AP_1',
                         'rand_insert_same_R_1','rand_swap_same_R_1','rand_insert_other_R_1', 'rand_swap_other_R_1']
         for i_action in self.action_space_1:
             self.use_actions[i_action] =[0, 0, 0]
@@ -138,7 +138,7 @@ class RL_Q():
 
         # 第1阶段，单位可改善最多的方向的加工时间最小的工件，在同一机器/其他机器，进行insert/swap
         self.action_space[12] = ['effe_insert_same_AP_1', 'effe_swap_same_AP_1']
-        self.action_space[13] = ['effe_insert_other_APe_1', 'effe_swap_other_AP_1']
+        self.action_space[13] = ['effe_insert_other_AP_1', 'effe_swap_other_AP_1']
 
         # 第一阶段，随机
         self.action_space[14] = ['rand_insert_same_R_1','rand_swap_same_R_1']
@@ -197,10 +197,18 @@ class RL_Q():
         2. 几代不优
         3. 修复的是否同一个机器
         '''
+        self.schedule_ins.idle_time_insertion(self.inital_refset[0][0], self.inital_refset[0][2], self.inital_refset[0][1])
         job_block = []
-        for i in self.ini.schedule_job_block.keys():
-            for j in self.ini.schedule_job_block[i]:
+        for i in self.schedule_ins.schedule_job_block.keys():
+            for j in self.schedule_ins.schedule_job_block[i]:
                 job_block.append(j)
+
+        # from SS_RL.diagram import job_diagram
+        # import matplotlib.pyplot as plt
+        # dia = job_diagram(self.ini.schedule, self.ini.job_execute_time, self.file_name, 1)
+        # dia.pre()
+        # plt.savefig('./img1203/pic-{}.png'.format(int(1)))
+        # plt.show()
 
         if self.config.machine_num_on_stage[0] < len(job_block):        # 若机器数 < 分段数：说明第一阶段被卡了
             a = 0
@@ -223,6 +231,17 @@ class RL_Q():
         return self.state_space[(a,b,c)]
 
     def get_reward(self, cur_best_opt,impro_degree,diversity_degree):
+        # reward = 0
+        # if (self.best_opt - cur_best_opt) > 0:
+        #     reward = 1
+        # if self.trial > 5:
+        #     reward = -0.2
+        #
+        # fp = open('./time_cost.txt', 'a+')
+        # print('{0}   {1}   {2}    {3}     {4}'.format(self.file_name,self.best_opt,cur_best_opt,self.inital_obj,self.config.ture_opt), file=fp)
+        # fp.close()
+
+
         if self.best_opt == 0:
             impor = (self.best_opt - cur_best_opt) / 1
         else:
@@ -232,21 +251,21 @@ class RL_Q():
             reward = math.exp((impor + impro_degree + diversity_degree)/2)
         else:
             reward = -math.exp((impro_degree + diversity_degree)/2)
-        # if np.isnan(reward):
-        #     print(True)
-        # if self.trial > 50:
-        #     reward = -math.exp(1)
-        # if self.inital_obj == 0:
-        #     reward = 0
-        # elif self.best_opt >= cur_best_opt:
-        #     reward = (self.best_opt - cur_best_opt) / (self.inital_obj - self.config.ture_opt)
-        # else:
-        #     reward = 0
-        # if reward < 0:
-        #     reward = (self.best_opt - cur_best_opt) / self.config.ture_opt
-        #     fp = open('./time_cost.txt', 'a+')
-        #     print('{0}   {1}   {2}    {3}     {4}'.format(self.file_name,self.best_opt,cur_best_opt,self.inital_obj,self.config.ture_opt), file=fp)
-        #     fp.close()
+        if np.isnan(reward):
+            print(True)
+        if self.trial > 50:
+            reward = -math.exp(1)
+        if self.inital_obj == 0:
+            reward = 0
+        elif self.best_opt >= cur_best_opt:
+            reward = (self.best_opt - cur_best_opt) / (self.inital_obj - self.config.ture_opt)
+        else:
+            reward = 0
+        if reward < 0:
+            reward = (self.best_opt - cur_best_opt) / self.config.ture_opt
+            fp = open('./time_cost.txt', 'a+')
+            print('{0}   {1}   {2}    {3}     {4}'.format(self.file_name,self.best_opt,cur_best_opt,self.inital_obj,self.config.ture_opt), file=fp)
+            fp.close()
 
             # 这是一个注释
             # diag = job_diagram(self.inital_refset[0][0], self.inital_refset[0][2], self.file_name, 2)
@@ -271,6 +290,11 @@ class RL_Q():
             job_execute_time = item[2]
             obj = item[1]
 
+            # case_file_name = '1259_Instance_20_2_3_0,6_1_20_Rep4.txt'
+            # dia = job_diagram(schedule, job_execute_time, self.file_name, 11)
+            # dia.pre()
+            # plt.savefig('./img1203/pic-{}.png'.format(11))
+
 
             while i < len(self.action_space[action]):
                 exceuse_search = self.action_space[action][i]
@@ -293,6 +317,8 @@ class RL_Q():
                 search_method_2 = split_list[3]
                 config_same_machine = split_list[2]
 
+
+
                 # stage = int(opea_name[-1])      # 确定操作的阶段
                 # oper_method = opea_name[4]      # 确定是insert/swap
                 # search_method = opea_name[:4]   # 确定是有效搜索/随机搜索
@@ -307,6 +333,8 @@ class RL_Q():
                 neig_search = neighbo_search.Neighbo_Search(schedule, job_execute_time, obj, self.file_name)
                 loca_machine, selected_job, oper_job_list = neig_search.chosen_job(search_method_1, search_method_2,
                                                                             config_same_machine, stage, oper_method)
+
+
                 update_obj = obj
                 for key in oper_job_list.keys():
                     oper_machine = key
@@ -315,6 +343,12 @@ class RL_Q():
                         neig_search = neighbo_search.Neighbo_Search(schedule, job_execute_time, obj, self.file_name)
                         update_schedule, update_obj, update_job_execute_time = neig_search.search_opea(oper_method,obj,stage, loca_machine, selected_job, oper_machine, oper_job)
                         print(0, update_schedule, update_obj)
+                        # case_file_name = '1259_Instance_20_2_3_0,6_1_20_Rep4.txt'
+                        # dia = job_diagram(update_schedule, update_job_execute_time,
+                        # self.file_name, 21)
+                        # dia.pre()
+                        # plt.savefig('./img1203/pic-{}.png'.format(21))
+
                         if update_obj < obj:
                             break
 
@@ -342,10 +376,13 @@ class RL_Q():
 
                     print(1, 'self.obj:{0},self.update_obj:{1}'.format(obj, update_obj))
 
+
+
             new_list.append([copy.deepcopy(schedule), copy.deepcopy(obj), copy.deepcopy(job_execute_time)])
             # new_list[index] = [final_schedule, final_obj, final_job_execute_time]
             if update:
                 self.upadate_num += 1
+        self.oper_same_machine.append((stage, config_same_machine))
         new_list = sorted(new_list, key=lambda x: x[1])
         self.inital_refset = copy.deepcopy(new_list)
         print(1)
@@ -427,6 +464,8 @@ class RL_Q():
                 if len(j_item) == 0:
                     print('报错了！！！')
 
+
+
         obj_list = [item[1] for item in self.inital_refset]
         # diversity_degree = len(set(obj_list)) / len(obj_list)
         diversity_degree = (len(obj_list) - len(set(obj_list))) / len(obj_list)
@@ -449,8 +488,9 @@ class RL_Q():
         new_inital_refset = copy.deepcopy(self.inital_refset)
         # new_inital_refset = []
 
-        if next_state == 7:
+        # if next_state == 7:
 
+        if self.trial > 10:
             self.max_iter += 1
             self.trial = 0
             for index in range(int(len(self.inital_refset) / 2)):
@@ -488,7 +528,7 @@ class RL_Q():
         # update_env(S, episode, step_counter)
         self.max_iter = 0
         a = 0
-        while self.max_iter < 2:
+        while self.max_iter < 3:
             print('数据集的名字：{0}'.format(self.file_name))
             A = self.choose_action(S, self.q_table)
             S_, R = self.step(S, A)
@@ -519,7 +559,7 @@ class RL_Q():
 
     def rl_execute(self):
         step_counter = 0
-        S = 0  # 初始状态为0
+        S = 7  # 初始状态为0
         CUM_REWARD = 0
 
         self.max_iter = 0

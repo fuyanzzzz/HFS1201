@@ -154,6 +154,13 @@ class HFS():
         self.obj = self.schedule_ins.cal(self.job_execute_time)
         # 进行空闲插入程序后的目标值
 
+        # from SS_RL.diagram import job_diagram
+        # import matplotlib.pyplot as plt
+        # dia = job_diagram(self.schedule, self.job_execute_time, self.file_name, 1)
+        # dia.pre()
+        # plt.savefig('./img1203/pic-{}.png'.format(int(self.obj)))
+        if self.obj == 38337:
+            print(1)
         self.schedule,self.job_execute_time,self.obj = self.schedule_ins.idle_time_insertion(self.schedule,self.job_execute_time,self.obj)
         # self.get_job_info(self.job_execute_time)
         self.schedule_ins.get_job_info(self.job_execute_time)

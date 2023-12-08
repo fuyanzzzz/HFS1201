@@ -117,7 +117,7 @@ class Neighbo_Search():
 
 
         # 早到工件往后insert/swap,延误工件往前insert/swap
-        job_info = self.schedule_ins.get_job_info(self.update_job_execute_time)
+        job_info = self.schedule_ins.get_job_info(self.job_execute_time)
         job_flag = job_info[selected_job][-1]
         if stage == 0:
             job_flag = 1
@@ -137,10 +137,15 @@ class Neighbo_Search():
                 # 这里如果oper_job_list为空咋办？？？
             if len(oper_job_list[oper_machine]) == 0:
                 if selected_job == self.update_schedule[(stage, loca_machine)][-1]:
-                    oper_job_list[oper_machine].append(self.update_schedule[(stage, loca_machine)][-2])
+                    if len(self.update_schedule[(stage, loca_machine)])>1:
+                        oper_job_list[oper_machine].append(self.update_schedule[(stage, loca_machine)][-2])
+                    else:
+                        oper_job_list[oper_machine].append(self.update_schedule[(stage, loca_machine)][-1])
                 if selected_job == self.update_schedule[(stage, loca_machine)][0]:
-                    oper_job_list[oper_machine].append(self.update_schedule[(stage, loca_machine)][1])
-
+                    if len(self.update_schedule[(stage, loca_machine)])>1:
+                        oper_job_list[oper_machine].append(self.update_schedule[(stage, loca_machine)][1])
+                    else:
+                        oper_job_list[oper_machine].append(self.update_schedule[(stage, loca_machine)][0])
 
         else:
             oper_machine_list = list(range(self.config.machine_num_on_stage[0]))
@@ -261,12 +266,12 @@ class Neighbo_Search():
             选择并确定工件
         '''
 
-        # 这里画个图
-        from SS_RL.diagram import job_diagram
-        import matplotlib.pyplot as plt
-        dia = job_diagram(self.update_schedule,self.job_execute_time,self.file_name,1)
-        dia.pre()
-        plt.savefig('./img1203/pic-{}.png'.format(int(1)))
+        # # 这里画个图
+        # from SS_RL.diagram import job_diagram
+        # import matplotlib.pyplot as plt
+        # dia = job_diagram(self.update_schedule,self.job_execute_time,self.file_name,1)
+        # dia.pre()
+        # plt.savefig('./img1203/pic-{}.png'.format(int(1)))
 
         self.schedule_ins.idle_time_insertion(self.update_schedule, self.job_execute_time, self.obj)
         selected_job = None
@@ -280,7 +285,8 @@ class Neighbo_Search():
                     for j in self.schedule_ins.schedule_job_block[i]:
                         if j == self.schedule_ins.schedule_job_block[0]:
                             continue
-                        stuck_job[j[0][0][0]] = j[0][2]
+                        if len(j[0][0]):
+                            stuck_job[j[0][0][0]] = j[0][2]
                 sorted_dict = dict(sorted(stuck_job.items(), key=lambda item: item[1], reverse=True))
                 selected_job = list(sorted_dict.keys())[0]
 
@@ -350,7 +356,7 @@ class Neighbo_Search():
                     delay_job = []
                     for job in need_excute_block:
                         if self.job_execute_time[(self.config.stages_num - 1, job)] >= self.config.ddl_windows[job]:
-                            delay_job.append([job,self.config.ddl_weight[job]])
+                            delay_job.append([job,self.config.ddl_weight[job],self.config.job_process_time[stage][job]])
                     if len(delay_job):
                         if search_method_2[1] == 'F':
                             selected_job = delay_job[0][0]

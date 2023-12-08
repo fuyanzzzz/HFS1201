@@ -10,7 +10,7 @@ import time
 
 import pandas as pd
 import numpy as np
-from torchvision.utils import save_image
+# from torchvision.utils import save_image
 
 from SS_RL import neighbo_search
 from SS_RL.diagram import job_diagram
@@ -28,10 +28,13 @@ ACTIONS = ['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswap0','
 # 1. 生成初始解，这个没有问题
 actions = range(16)
 max_iter = 3
-
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+pd.reset_option('display.max_rows')
+pd.reset_option('display.max_columns')
 
 q_table = pd.DataFrame(
-            np.zeros((12, 16)),columns=actions)
+            np.random.rand(12, 16),columns=actions)
 
 
 data_folder = "data"  # 数据文件夹的路径
@@ -94,20 +97,34 @@ while True:
 
         hfs.initial_solu()
 
+        print('当前目标值：{0}'.format(hfs.inital_refset[0][1]))
+
+        # dia = job_diagram(hfs.inital_refset[0][0], hfs.inital_refset[0][2], case_file_name, index)
+        # dia.pre()
+        # plt.savefig('./img1203/pic-{}.png'.format(index))
+        # plt.show()
+
         rl_ = RL_Q(N_STATES,ACTIONS,hfs.inital_refset,q_table,case_file_name)
         best_opt_execute = rl_.rl_execute()
 
         case_CUM_REWARD.append(best_opt_execute)
         end_time = time.time()
 
+        # from SS_RL.diagram import job_diagram
+        # import matplotlib.pyplot as plt
+        #
+        # dia = job_diagram(rl_.schedule, rl_.job_execute_time, rl_.file_name, index)
+        # dia.pre()
+        # plt.savefig('./img1203/pic-{}.png'.format(index))
 
 
 
-        # plt.plot(q_value_changes)
-        # plt.xlabel('训练轮次')
-        # plt.ylabel('Q值变化')
-        # plt.title('Q值变化随训练轮次的变化')
-        # plt.pause(0.1)  # 用于动态展示图像
+
+        plt.plot(q_value_changes)
+        plt.xlabel('训练轮次')
+        plt.ylabel('Q值变化')
+        plt.title('Q值变化随训练轮次的变化')
+        plt.pause(0.1)  # 用于动态展示图像
 
         if (len(txt_files)*iter +index) % 20 == 0:
             fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
@@ -127,10 +144,24 @@ while True:
             # 调整子图之间的垂直间距
             plt.tight_layout()
             # plt.pause(0.1)  # 用于动态展示图像
-            plt.savefig('./img0.05_0.9_1121/pic-{}.png'.format(int(len(txt_files)*iter +index)))
-            fp = open('./0.05_0.9_1121.txt', 'a+')
-            print(len(txt_files)*iter +index,rl_.q_table, file=fp)
-            fp.close()
+            plt.savefig('./img0.05_0.9_1207_2/pic-{}.png'.format(int(len(txt_files)*iter +index)))
+
+            with open('./0.05_0.9_1207_2.txt', 'a+') as fp:
+                # 设置显示选项
+                pd.set_option('display.max_rows', None)
+                pd.set_option('display.max_columns', None)
+
+                # 将 DataFrame 写入文件
+                print(index, q_table, file=fp)
+
+                # 重置显示选项为默认值
+                pd.reset_option('display.max_rows')
+                pd.reset_option('display.max_columns')
+
+
+            # fp = open('./0.05_0.9_1207_2.txt', 'a+')
+            # print(len(txt_files)*iter +index,rl_.q_table, file=fp)
+            # fp.close()
     iter += 1
 
 
@@ -174,6 +205,7 @@ while True:
     # neig_search.update_schedule, neig_search.update_job_execute_time, neig_search.update_obj = neig_search.hfs.idle_time_insertion(
     #     schedule, neig_search.update_job_execute_time, neig_search.update_obj)
     # neig_search.hfs.cal(neig_search.update_job_execute_time)
+
 
 
 
