@@ -381,6 +381,108 @@ class Neighbo_Search():
 
         return loca_machine, selected_job, oper_job_list
 
+    def sort_(self,search_method_1, job_block_rule,A_or_D, stage,sort_rule):
+        # 找到所有的延误片断：
+        self.schedule_ins.idle_time_insertion(self.update_schedule, self.job_execute_time, self.obj)
+        self.schedule_ins.get_job_info(self.job_execute_time)
+        all_early_job_list = []
+        all_delay_job_list = []
+        for machine in range(self.config.machine_num_on_stage[0]):
+            early_job_list = []
+            delay_job_list = []
+            early_penalty_value = 0
+            delay_penalty_value = 0
+
+            for job in self.update_schedule[(1,machine)]:
+                job_falg = job_info[job][-1]
+                if job_falg == -1:
+                    early_job_list.append(job)
+                    early_penalty_value += self.config.ect_weight[job]
+                    if len(delay_job_list) > 1:
+                        all_delay_job_list.append((delay_job_list,machine,delay_penalty_value))
+                    delay_job_list.clear()
+                    delay_penalty_value = 0
+                elif job_falg == 1:
+                    delay_job_list.append(job)
+                    delay_penalty_value += self.config.ddl_weight[job]
+                    if len(early_job_list)>1:
+                        all_early_job_list.append((early_job_list,machine,early_penalty_value))
+                    early_job_list.clear()
+                    early_penalty_value == 0
+                else:
+                    if len(early_job_list) > 1:
+                        all_early_job_list.append((early_job_list,machine,early_penalty_value))
+                    early_job_list.clear()
+                    early_penalty_value == 0
+                    if len(delay_job_list) > 1:
+                        all_delay_job_list.append((delay_job_list,machine,delay_penalty_value))
+                    delay_job_list.clear()
+                    delay_penalty_value = 0
+        # action是针对，早到还是延误：
+        # 如果是针对早到：
+        if job_block_rule == 'early':
+            if len(all_early_job_list) != 0:
+
+                all_early_job_list = sorted(all_early_job_list, key=lambda x: x[-1],reverse=True)   # 升序还是降序
+                # 判断是哪一种类型的排序【加工时间，交付期窗口，权重】
+                need_excute_job = all_early_job_list[0][0]
+                machine = all_early_job_list[0][1]
+        elif job_block_rule == 'delay':
+            if len(all_early_job_list) != 0:
+                all_early_job_list = sorted(all_early_job_list, key=lambda x: x[-1], reverse=True)  # 升序还是降序
+                # 判断是哪一种类型的排序【加工时间，交付期窗口，权重】
+                need_excute_job = all_early_job_list[0][0]
+                machine = all_early_job_list[0][1]
+        else:
+            # 还有一种是按照卡住的工件块
+            pass
+
+
+        first_job_index = self.update_schedule[(1, machine)].index(need_excute_job[0])
+        last_job_index = self.update_schedule[(1, machine)].index(need_excute_job[-1])
+        sort_list = []
+        if sort_rule == 'P':
+            for job in need_excute_job:
+                sort_list.append((job,self.config.job_process_time[stage][job]))
+        elif sort_rule == 'D':
+            if job_block_rule == 'delay':
+                for job in need_excute_job:
+                    sort_list.append((job,self.config.ddl_windows[job]))
+            elif job_block_rule == 'early':
+                for job in need_excute_job:
+                    sort_list.append((job,self.config.ect_windows[job]))
+        elif sort_rule == 'W':
+            if job_block_rule == 'delay':
+                for job in need_excute_job:
+                    sort_list.append((job,self.config.ddl_weight[job]))
+            elif job_block_rule == 'early':
+                for job in need_excute_job:
+                    sort_list.append((job,self.config.ect_weight[job]))
+
+        des_sort = False
+        if A_or_D == 'D':
+            des_sort = True
+
+        sort_list = sorted(sort_list, key=lambda x: x[-1],reverse = des_sort)    # 升序还是降序
+        new_job_list = [item[0] for item in sort_list]
+        self.update_schedule[(1, machine)][first_job_index:last_job_index+1] = new_job_list
+
+        # 基本没啥问题：
+        # 就是还有一种因为第一阶段卡住的工件块的情况还没有写，此外，动作空间，升序降序的定义需要重写
+
+
+
+
+
+
+        if job_block_rule == 'delay':
+            if len(all_delay_job_list) == 0:
+                print(1)
+        # 如果是针对延误：
+
+
+
+
     def search_opea(self,oper_method,obj,stage, loca_machine, selected_job, oper_machine, oper_job):
         # self.re_cal()
         # print(self.update_job_execute_time)

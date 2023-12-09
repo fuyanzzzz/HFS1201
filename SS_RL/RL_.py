@@ -72,13 +72,14 @@ class RL_Q():
         #                 'randswap0', 'randswap1']
 
         self.action_space_1 = ['effe_insert_same_stuck_0','effe_swap_same_stuck_0','effe_insert_other_stuck_0','effe_swap_other_stuck_0',
-                        'effe_insert_same_IF_1','effe_swap_same_IF_1','effe_insert_other_IF_1','effe_swap_other_IF_1',
-                        'effe_insert_same_IW_1','effe_swap_same_IW_1','effe_insert_other_IW_1','effe_swap_other_IW_1',
-                        'effe_insert_same_IP_1','effe_swap_same_IP_1','effe_insert_other_IP_1','effe_swap_other_IP_1',
+                        # 'effe_insert_same_IF_1','effe_swap_same_IF_1','effe_insert_other_IF_1','effe_swap_other_IF_1',
+                        # 'effe_insert_same_IW_1','effe_swap_same_IW_1','effe_insert_other_IW_1','effe_swap_other_IW_1',
+                        # 'effe_insert_same_IP_1','effe_swap_same_IP_1','effe_insert_other_IP_1','effe_swap_other_IP_1',
                         'effe_insert_same_AF_1', 'effe_swap_same_AF_1','effe_insert_other_AF_1', 'effe_swap_other_AF_1',
                         'effe_insert_same_AW_1','effe_swap_same_AW_1','effe_insert_other_AW_1','effe_swap_other_AW_1',
                         'effe_insert_same_AP_1', 'effe_swap_same_AP_1','effe_insert_other_AP_1', 'effe_swap_other_AP_1',
-                        'rand_insert_same_R_1','rand_swap_same_R_1','rand_insert_other_R_1', 'rand_swap_other_R_1']
+                        'rand_insert_same_R_1','rand_swap_same_R_1','rand_insert_other_R_1', 'rand_swap_other_R_1',
+                        'sort_delay_A_P_1','sort_delay_A_D_1','sort_early_A_P_1','sort_early_A_D_1','sort_stuck_A_D_1']
         for i_action in self.action_space_1:
             self.use_actions[i_action] =[0, 0, 0]
 
@@ -117,16 +118,15 @@ class RL_Q():
         self.action_space[1] = ['effe_insert_other_stuck_0','effe_swap_other_stuck_0']
 
         # 第1阶段，单位增加目标值最多的方向的第一个工件，在同一机器/其他机器，进行insert/swap
-        self.action_space[2] = ['effe_insert_same_IF_1','effe_swap_same_IF_1']
-        self.action_space[3] = ['effe_insert_other_IF_1','effe_swap_other_IF_1']
+        self.action_space[2] = ['sort_delay_A_P_1']
+        self.action_space[3] = ['sort_delay_A_D_1']
 
         # 第1阶段，单位可改善最多的方向的权重贡献最大的工件，在同一机器/其他机器，进行insert/swap
-        self.action_space[4] = ['effe_insert_same_IW_1','effe_swap_same_IW_1']
-        self.action_space[5] = ['effe_insert_other_IW_1','effe_swap_other_IW_1']
+        self.action_space[4] = ['sort_early_A_P_1']
+        self.action_space[5] = ['sort_early_A_D_1']
 
         # 第1阶段，单位可改善最多的方向的加工时间最小的工件，在同一机器/其他机器，进行insert/swap
-        self.action_space[6] = ['effe_insert_same_IP_1','effe_swap_same_IP_1']
-        self.action_space[7] = ['effe_insert_other_IP_1','effe_swap_other_IP_1']
+        self.action_space[6] = ['sort_stuck_A_D_1']
 
         # 第1阶段，单位可改善最多的方向的第一个工件，在同一机器/其他机器，进行insert/swap
         self.action_space[8] = ['effe_insert_same_AF_1', 'effe_swap_same_AF_1']
@@ -142,7 +142,7 @@ class RL_Q():
 
         # 第一阶段，随机
         self.action_space[14] = ['rand_insert_same_R_1','rand_swap_same_R_1']
-        self.action_space[15] = ['rand_insert_other_R_1', 'rand_swap_other_R_1']
+        self.action_space[7] = ['rand_insert_other_R_1', 'rand_swap_other_R_1']
 
 
 
@@ -331,30 +331,43 @@ class RL_Q():
                 # 根据上面的工件信息特征，去确定进行领域搜索涉及的工件信息stage
                 # loca_machine, selected_job, oper_machine, oper_job = self.chosen_job(search_method_1, search_method_2,config_same_machine,stage,oper_method)
                 neig_search = neighbo_search.Neighbo_Search(schedule, job_execute_time, obj, self.file_name)
-                loca_machine, selected_job, oper_job_list = neig_search.chosen_job(search_method_1, search_method_2,
-                                                                            config_same_machine, stage, oper_method)
+                if search_method_1 != 'sort':
+                    loca_machine, selected_job, oper_job_list = neig_search.chosen_job(search_method_1, search_method_2,
+                                                                                       config_same_machine, stage,
+                                                                                       oper_method)
+                    update_obj = obj
+                    for key in oper_job_list.keys():
+                        oper_machine = key
+                        for job in oper_job_list[key]:
+                            oper_job = job
+                            neig_search = neighbo_search.Neighbo_Search(schedule, job_execute_time, obj, self.file_name)
+                            update_schedule, update_obj, update_job_execute_time = neig_search.search_opea(oper_method,obj,stage, loca_machine, selected_job, oper_machine, oper_job)
+                            print(0, update_schedule, update_obj)
+                            # case_file_name = '1259_Instance_20_2_3_0,6_1_20_Rep4.txt'
+                            # dia = job_diagram(update_schedule, update_job_execute_time,
+                            # self.file_name, 21)
+                            # dia.pre()
+                            # plt.savefig('./img1203/pic-{}.png'.format(21))
 
+                            if update_obj < obj:
+                                break
+                stage = int(split_list[-1])
+                job_block_rule = split_list[1]
+                search_method_1 = split_list[0]
+                sort_rule = split_list[3]
+                A_or_D = split_list[2]
+                if search_method_1 == 'sort':
+                     neig_search.sort_(search_method_1, job_block_rule,A_or_D, stage,sort_rule)
 
-                update_obj = obj
-                for key in oper_job_list.keys():
-                    oper_machine = key
-                    for job in oper_job_list[key]:
-                        oper_job = job
-                        neig_search = neighbo_search.Neighbo_Search(schedule, job_execute_time, obj, self.file_name)
-                        update_schedule, update_obj, update_job_execute_time = neig_search.search_opea(oper_method,obj,stage, loca_machine, selected_job, oper_machine, oper_job)
-                        print(0, update_schedule, update_obj)
-                        # case_file_name = '1259_Instance_20_2_3_0,6_1_20_Rep4.txt'
-                        # dia = job_diagram(update_schedule, update_job_execute_time,
-                        # self.file_name, 21)
-                        # dia.pre()
-                        # plt.savefig('./img1203/pic-{}.png'.format(21))
+                # loca_machine, selected_job, oper_job_list = neig_search.chosen_job(search_method_1, search_method_2,
+                #                                                             config_same_machine, stage, oper_method)
 
-                        if update_obj < obj:
-                            break
 
                 # print(1, update_schedule,update_obj)
                 self.use_actions[exceuse_search][0] += 1        # 计算该搜索因子使用了几次，有效的有几次，具体改进了多少
                 # 如果更优，则更新相关参数
+
+
                 if update_obj < obj:
                     update = True
                     # print(0,update_schedule,update_obj)
