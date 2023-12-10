@@ -39,7 +39,7 @@ action_set = ['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswap0
 EPSILON = 0.9
 # ALPHA = 0.1
 ALPHA = 0.05
-GAMMA = 0.9
+GAMMA = 1
 MAX_EPISODES = 15
 FRESH_TIME = 0.3
 TerminalFlag = "terminal"
@@ -71,6 +71,15 @@ class RL_Q():
         # self.action_space_1 = ['effeinsert0', 'effeinsert1', 'randinsert0', 'randinsert1', 'effeswap0', 'effeswap1',
         #                 'randswap0', 'randswap1']
 
+
+        '''
+        动作空间：
+        1. 对于第二阶段卡住的工件，将该工件在第一阶段往前insert/swap,同一/不同机器
+        2. 选择第二阶段往前/往后增加的目标值最少的工件块，选择权重最大/第一个/加工时间最短的工件进行insert/swap,对于同一机器/不同机器
+        3. 随机选择一个工件，根据属性，进行insert/swap
+        4. 找到延误工件/早到工件块，按照一定规则【加工时间规则/ddl规则/ect规则/权重规则】进行排序
+        '''
+
         self.action_space_1 = ['effe_insert_same_stuck_0','effe_swap_same_stuck_0','effe_insert_other_stuck_0','effe_swap_other_stuck_0',
                         # 'effe_insert_same_IF_1','effe_swap_same_IF_1','effe_insert_other_IF_1','effe_swap_other_IF_1',
                         # 'effe_insert_same_IW_1','effe_swap_same_IW_1','effe_insert_other_IW_1','effe_swap_other_IW_1',
@@ -79,7 +88,7 @@ class RL_Q():
                         'effe_insert_same_AW_1','effe_swap_same_AW_1','effe_insert_other_AW_1','effe_swap_other_AW_1',
                         'effe_insert_same_AP_1', 'effe_swap_same_AP_1','effe_insert_other_AP_1', 'effe_swap_other_AP_1',
                         'rand_insert_same_R_1','rand_swap_same_R_1','rand_insert_other_R_1', 'rand_swap_other_R_1',
-                        'sort_delay_A_P_1','sort_delay_A_D_1','sort_early_A_P_1','sort_early_A_D_1','sort_stuck_A_D_1']
+                        'sort_delay_A_P_1','sort_delay_A_D_1','sort_early_D_P_1','sort_early_A_D_1','sort_stuck_A_S0_1']
         for i_action in self.action_space_1:
             self.use_actions[i_action] =[0, 0, 0]
 
@@ -122,11 +131,11 @@ class RL_Q():
         self.action_space[3] = ['sort_delay_A_D_1']
 
         # 第1阶段，单位可改善最多的方向的权重贡献最大的工件，在同一机器/其他机器，进行insert/swap
-        self.action_space[4] = ['sort_early_A_P_1']
+        self.action_space[4] = ['sort_early_D_P_1']
         self.action_space[5] = ['sort_early_A_D_1']
 
         # 第1阶段，单位可改善最多的方向的加工时间最小的工件，在同一机器/其他机器，进行insert/swap
-        self.action_space[6] = ['sort_stuck_A_D_1']
+        self.action_space[6] = ['sort_stuck_A_S0_1']
 
         # 第1阶段，单位可改善最多的方向的第一个工件，在同一机器/其他机器，进行insert/swap
         self.action_space[8] = ['effe_insert_same_AF_1', 'effe_swap_same_AF_1']
@@ -231,41 +240,41 @@ class RL_Q():
         return self.state_space[(a,b,c)]
 
     def get_reward(self, cur_best_opt,impro_degree,diversity_degree):
-        # reward = 0
-        # if (self.best_opt - cur_best_opt) > 0:
-        #     reward = 1
-        # if self.trial > 5:
-        #     reward = -0.2
-        #
+        reward = 0
+        if (self.best_opt - cur_best_opt) > 0:
+            reward = (self.best_opt - cur_best_opt) / self.inital_obj
+        if reward > 0.2:
+            reward = 0.2
+
         # fp = open('./time_cost.txt', 'a+')
         # print('{0}   {1}   {2}    {3}     {4}'.format(self.file_name,self.best_opt,cur_best_opt,self.inital_obj,self.config.ture_opt), file=fp)
         # fp.close()
 
 
-        if self.best_opt == 0:
-            impor = (self.best_opt - cur_best_opt) / 1
-        else:
-            impor = (self.best_opt - cur_best_opt) / self.best_opt
-
-        if self.trial == 0:
-            reward = math.exp((impor + impro_degree + diversity_degree)/2)
-        else:
-            reward = -math.exp((impro_degree + diversity_degree)/2)
-        if np.isnan(reward):
-            print(True)
-        if self.trial > 50:
-            reward = -math.exp(1)
-        if self.inital_obj == 0:
-            reward = 0
-        elif self.best_opt >= cur_best_opt:
-            reward = (self.best_opt - cur_best_opt) / (self.inital_obj - self.config.ture_opt)
-        else:
-            reward = 0
-        if reward < 0:
-            reward = (self.best_opt - cur_best_opt) / self.config.ture_opt
-            fp = open('./time_cost.txt', 'a+')
-            print('{0}   {1}   {2}    {3}     {4}'.format(self.file_name,self.best_opt,cur_best_opt,self.inital_obj,self.config.ture_opt), file=fp)
-            fp.close()
+        # if self.best_opt == 0:
+        #     impor = (self.best_opt - cur_best_opt) / 1
+        # else:
+        #     impor = (self.best_opt - cur_best_opt) / self.best_opt
+        #
+        # if self.trial == 0:
+        #     reward = math.exp((impor + impro_degree + diversity_degree)/2)
+        # else:
+        #     reward = -math.exp((impro_degree + diversity_degree)/2)
+        # if np.isnan(reward):
+        #     print(True)
+        # if self.trial > 50:
+        #     reward = -math.exp(1)
+        # if self.inital_obj == 0:
+        #     reward = 0
+        # elif self.best_opt >= cur_best_opt:
+        #     reward = (self.best_opt - cur_best_opt) / (self.inital_obj - self.config.ture_opt)
+        # else:
+        #     reward = 0
+        # if reward < 0:
+        #     reward = (self.best_opt - cur_best_opt) / self.config.ture_opt
+        #     fp = open('./time_cost.txt', 'a+')
+        #     print('{0}   {1}   {2}    {3}     {4}'.format(self.file_name,self.best_opt,cur_best_opt,self.inital_obj,self.config.ture_opt), file=fp)
+        #     fp.close()
 
             # 这是一个注释
             # diag = job_diagram(self.inital_refset[0][0], self.inital_refset[0][2], self.file_name, 2)
@@ -357,7 +366,7 @@ class RL_Q():
                 sort_rule = split_list[3]
                 A_or_D = split_list[2]
                 if search_method_1 == 'sort':
-                     neig_search.sort_(search_method_1, job_block_rule,A_or_D, stage,sort_rule)
+                     update_schedule, update_obj, update_job_execute_time = neig_search.sort_(search_method_1, job_block_rule,A_or_D, stage,sort_rule)
 
                 # loca_machine, selected_job, oper_job_list = neig_search.chosen_job(search_method_1, search_method_2,
                 #                                                             config_same_machine, stage, oper_method)

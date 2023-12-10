@@ -26,15 +26,14 @@ import matplotlib.pyplot as plt
 N_STATES = 8
 ACTIONS = ['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswap0','effeswap1','randswap0','randswap1']
 # 1. 生成初始解，这个没有问题
-actions = range(16)
+actions = range(15)
 max_iter = 3
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 pd.reset_option('display.max_rows')
 pd.reset_option('display.max_columns')
 
-q_table = pd.DataFrame(
-            np.random.rand(12, 16),columns=actions)
+q_table = pd.DataFrame(np.random.rand(12, 15),columns=actions)
 
 
 data_folder = "data"  # 数据文件夹的路径
@@ -88,6 +87,8 @@ while True:
         INDEX.append(len(txt_files)*iter +index)
 
         fp = open('./time_cost.txt', 'a+')
+        if index == 0:
+            print('索引   文件名   耗时  数据最优解   实验最优解 ', file=fp)
         print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files)*iter +index,file_name,round(duration,2),rl_.config.ture_opt,rl_.best_opt), file=fp)
         fp.close()
 
@@ -120,11 +121,11 @@ while True:
 
 
 
-        plt.plot(q_value_changes)
-        plt.xlabel('训练轮次')
-        plt.ylabel('Q值变化')
-        plt.title('Q值变化随训练轮次的变化')
-        plt.pause(0.1)  # 用于动态展示图像
+        # plt.plot(q_value_changes)
+        # plt.xlabel('训练轮次')
+        # plt.ylabel('Q值变化')
+        # plt.title('Q值变化随训练轮次的变化')
+        # plt.pause(0.1)  # 用于动态展示图像
 
         if (len(txt_files)*iter +index) % 20 == 0:
             fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
@@ -144,9 +145,9 @@ while True:
             # 调整子图之间的垂直间距
             plt.tight_layout()
             # plt.pause(0.1)  # 用于动态展示图像
-            plt.savefig('./img0.05_0.9_1207_2/pic-{}.png'.format(int(len(txt_files)*iter +index)))
+            plt.savefig('./img0.05_1_1210/pic-{}.png'.format(int(len(txt_files)*iter +index)))
 
-            with open('./0.05_0.9_1207_2.txt', 'a+') as fp:
+            with open('./0.05_1_1210.txt', 'a+') as fp:
                 # 设置显示选项
                 pd.set_option('display.max_rows', None)
                 pd.set_option('display.max_columns', None)

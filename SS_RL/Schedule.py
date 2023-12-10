@@ -192,8 +192,8 @@ class Schedule_Instance():
                 else:
                     job_num_machine -= 1  # 而且对于工件块有合并的选项
 
-            self.all_job_block.insert(0, (job_block, early_job_weight, real_delay_job_weight - early_job_weight
-                                          , delay_job_weight, real_early_job_weight - delay_job_weight))
+            self.all_job_block.insert(0, (job_block, early_job_weight, early_job_weight - real_delay_job_weight,
+                                          delay_job_weight,  delay_job_weight - real_early_job_weight))
             self.schedule_job_block[machine].append(self.all_job_block)
             for i in self.schedule_job_block:
                 if len(self.schedule_job_block[i]) > 1:
