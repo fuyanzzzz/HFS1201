@@ -90,6 +90,8 @@ class Schedule_Instance():
             job_num_machine = len(job_list_machine)  # 判断该机器上有几个工件
             early_job_weight = 0
             delay_job_weight = 0
+            real_delay_job_weight = 0
+            real_early_job_weight = 0
             end_time = time.time()
 
             while job_num_machine > 0:
