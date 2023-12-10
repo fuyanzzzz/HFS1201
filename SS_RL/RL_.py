@@ -80,15 +80,13 @@ class RL_Q():
         4. 找到延误工件/早到工件块，按照一定规则【加工时间规则/ddl规则/ect规则/权重规则】进行排序
         '''
 
-        self.action_space_1 = ['effe_insert_same_stuck_0','effe_swap_same_stuck_0','effe_insert_other_stuck_0','effe_swap_other_stuck_0',
-                        # 'effe_insert_same_IF_1','effe_swap_same_IF_1','effe_insert_other_IF_1','effe_swap_other_IF_1',
-                        # 'effe_insert_same_IW_1','effe_swap_same_IW_1','effe_insert_other_IW_1','effe_swap_other_IW_1',
-                        # 'effe_insert_same_IP_1','effe_swap_same_IP_1','effe_insert_other_IP_1','effe_swap_other_IP_1',
-                        'effe_insert_same_AF_1', 'effe_swap_same_AF_1','effe_insert_other_AF_1', 'effe_swap_other_AF_1',
-                        'effe_insert_same_AW_1','effe_swap_same_AW_1','effe_insert_other_AW_1','effe_swap_other_AW_1',
-                        'effe_insert_same_AP_1', 'effe_swap_same_AP_1','effe_insert_other_AP_1', 'effe_swap_other_AP_1',
-                        'rand_insert_same_R_1','rand_swap_same_R_1','rand_insert_other_R_1', 'rand_swap_other_R_1',
-                        'sort_delay_A_P_1','sort_delay_A_D_1','sort_early_D_P_1','sort_early_A_D_1','sort_stuck_A_S0_1']
+        self.action_space_1 = ['effe_insert_same_M_1', 'effe_swap_same_M_1',
+                                'effe_insert_other_M_1', 'effe_swap_other_M_1',
+                                'effe_insert_same_M_0','effe_swap_same_M_0',
+                                'effe_insert_other_M_0','effe_swap_other_M_0',
+                                'rand_insert_same_M_1','rand_insert_same_M_1',
+                                'rand_insert_other_M_1','rand_insert_other_M_1',
+                                'sort_delay_A_P_1','sort_delay_A_D_1','sort_early_D_P_1','sort_early_A_D_1','sort_stuck_A_S0_1']
         for i_action in self.action_space_1:
             self.use_actions[i_action] =[0, 0, 0]
 
@@ -121,37 +119,60 @@ class RL_Q():
         # self.action_space[6] = ['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswap0','effeswap1','randswap0','randswap1']
         '''
         建立新的动作搜索空间
+
         '''
-        # 第0阶段，卡住的工件在同一机器/其他机器，进行insert/swap
-        self.action_space[0] = ['effe_insert_same_stuck_0','effe_swap_same_stuck_0']
-        self.action_space[1] = ['effe_insert_other_stuck_0','effe_swap_other_stuck_0']
+        # 在第二阶段选择目标值最大的工件之一，进行insert/swap操作effe_insert_same_AF_1
+        self.action_space[0] = ['effe_insert_same_M_1', 'effe_swap_same_M_1']     # 同一个机器
+        self.action_space[1] = ['effe_insert_other_M_1', 'effe_swap_other_M_1']     # 不同机器
+        # 在第一阶段选择松弛最小的工件之一，进行insert/swap操作
+        self.action_space[2] = ['effe_insert_same_M_0','effe_swap_same_M_0']      # 同一个机器
+        self.action_space[3] = ['effe_insert_other_M_0','effe_swap_other_M_0']      # 同一个机器
+        # 在第二阶段随机选择工件进行insert/swap:
+        self.action_space[4] = ['rand_insert_same_M_1','rand_insert_same_M_1']      # 同一个机器
+        self.action_space[5] = ['rand_insert_other_M_1','rand_insert_other_M_1']      # 同一个机器
 
         # 第1阶段，单位增加目标值最多的方向的第一个工件，在同一机器/其他机器，进行insert/swap
-        self.action_space[2] = ['sort_delay_A_P_1']
-        self.action_space[3] = ['sort_delay_A_D_1']
+        self.action_space[6] = ['sort_delay_A_P_1']
+        self.action_space[7] = ['sort_delay_A_D_1']
 
         # 第1阶段，单位可改善最多的方向的权重贡献最大的工件，在同一机器/其他机器，进行insert/swap
-        self.action_space[4] = ['sort_early_D_P_1']
-        self.action_space[5] = ['sort_early_A_D_1']
+        self.action_space[8] = ['sort_early_D_P_1']
+        self.action_space[9] = ['sort_early_A_D_1']
 
         # 第1阶段，单位可改善最多的方向的加工时间最小的工件，在同一机器/其他机器，进行insert/swap
-        self.action_space[6] = ['sort_stuck_A_S0_1']
+        self.action_space[10] = ['sort_stuck_A_S0_1']
 
-        # 第1阶段，单位可改善最多的方向的第一个工件，在同一机器/其他机器，进行insert/swap
-        self.action_space[8] = ['effe_insert_same_AF_1', 'effe_swap_same_AF_1']
-        self.action_space[9] = ['effe_insert_other_AF_1', 'effe_swap_other_AF_1']
 
-        # 第1阶段，单位可改善最多的方向的权重贡献最大的工件，在同一机器/其他机器，进行insert/swap
-        self.action_space[10] = ['effe_insert_same_AW_1','effe_swap_same_AW_1']
-        self.action_space[11] = ['effe_insert_other_AW_1','effe_swap_other_AW_1']
-
-        # 第1阶段，单位可改善最多的方向的加工时间最小的工件，在同一机器/其他机器，进行insert/swap
-        self.action_space[12] = ['effe_insert_same_AP_1', 'effe_swap_same_AP_1']
-        self.action_space[13] = ['effe_insert_other_AP_1', 'effe_swap_other_AP_1']
-
-        # 第一阶段，随机
-        self.action_space[14] = ['rand_insert_same_R_1','rand_swap_same_R_1']
-        self.action_space[7] = ['rand_insert_other_R_1', 'rand_swap_other_R_1']
+        # # 第0阶段，卡住的工件在同一机器/其他机器，进行insert/swap
+        # self.action_space[0] = ['effe_insert_same_stuck_0','effe_swap_same_stuck_0']
+        # self.action_space[1] = ['effe_insert_other_stuck_0','effe_swap_other_stuck_0']
+        #
+        # # 第1阶段，单位增加目标值最多的方向的第一个工件，在同一机器/其他机器，进行insert/swap
+        # self.action_space[2] = ['sort_delay_A_P_1']
+        # self.action_space[3] = ['sort_delay_A_D_1']
+        #
+        # # 第1阶段，单位可改善最多的方向的权重贡献最大的工件，在同一机器/其他机器，进行insert/swap
+        # self.action_space[4] = ['sort_early_D_P_1']
+        # self.action_space[5] = ['sort_early_A_D_1']
+        #
+        # # 第1阶段，单位可改善最多的方向的加工时间最小的工件，在同一机器/其他机器，进行insert/swap
+        # self.action_space[6] = ['sort_stuck_A_S0_1']
+        #
+        # # 第1阶段，单位可改善最多的方向的第一个工件，在同一机器/其他机器，进行insert/swap
+        # self.action_space[8] = ['effe_insert_same_AF_1', 'effe_swap_same_AF_1']
+        # self.action_space[9] = ['effe_insert_other_AF_1', 'effe_swap_other_AF_1']
+        #
+        # # 第1阶段，单位可改善最多的方向的权重贡献最大的工件，在同一机器/其他机器，进行insert/swap
+        # self.action_space[10] = ['effe_insert_same_AW_1','effe_swap_same_AW_1']
+        # self.action_space[11] = ['effe_insert_other_AW_1','effe_swap_other_AW_1']
+        #
+        # # 第1阶段，单位可改善最多的方向的加工时间最小的工件，在同一机器/其他机器，进行insert/swap
+        # self.action_space[12] = ['effe_insert_same_AP_1', 'effe_swap_same_AP_1']
+        # self.action_space[13] = ['effe_insert_other_AP_1', 'effe_swap_other_AP_1']
+        #
+        # # 第一阶段，随机
+        # self.action_space[14] = ['rand_insert_same_R_1','rand_swap_same_R_1']
+        # self.action_space[7] = ['rand_insert_other_R_1', 'rand_swap_other_R_1']
 
 
 

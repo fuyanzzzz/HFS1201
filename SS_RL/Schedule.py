@@ -8,6 +8,7 @@ class Schedule_Instance():
         self.schedule = schedule
         self.job_execute_time = job_execute_time
         self.config = AllConfig.get_config(file_name)
+        self.file_name = file_name
 
         self.schedule_job_block = {}
 
@@ -142,6 +143,8 @@ class Schedule_Instance():
 
                         if job_execute_time[(self.config.stages_num - 1, job)] < self.config.ect_windows[job]:
                             real_early_job.append(job)
+                        else:
+                            on_time_job.append(job)
                     elif job_execute_time[(self.config.stages_num - 1, job)] >= self.config.ddl_windows[job]:
                         delay_job.append(job)
 

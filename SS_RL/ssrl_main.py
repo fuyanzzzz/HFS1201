@@ -26,14 +26,14 @@ import matplotlib.pyplot as plt
 N_STATES = 8
 ACTIONS = ['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswap0','effeswap1','randswap0','randswap1']
 # 1. 生成初始解，这个没有问题
-actions = range(15)
+actions = range(11)
 max_iter = 3
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 pd.reset_option('display.max_rows')
 pd.reset_option('display.max_columns')
 
-q_table = pd.DataFrame(np.random.rand(12, 15),columns=actions)
+q_table = pd.DataFrame(np.random.rand(12, 11),columns=actions)
 
 
 data_folder = "data"  # 数据文件夹的路径
@@ -57,7 +57,7 @@ while True:
         break
     for index, file_name in enumerate(txt_files):
         time_cost = 0
-
+        file_name = '1259_Instance_20_2_3_0,6_1_20_Rep4.txt'
         start_time = time.time()
 
         # if index == 0:
