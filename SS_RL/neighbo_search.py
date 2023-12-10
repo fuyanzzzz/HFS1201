@@ -240,27 +240,31 @@ class Neighbo_Search():
 
     def chosen_job(self,search_method_1, search_method_2,config_same_machine,stage,oper_method):
         # # 分别在有效搜索 / 随机搜索  的条件下进行选择工件
-        # if method == 'effe':
-        #     if stage == 0:  # 使用第二阶段的开始加工时间 - 第一阶段的完工时间的松紧程序进行排序
-        #         values = [self.job_info[job][2] for job in range(self.config.jobs_num)]
-        #         values = [val if val != 0 else 1e-9 for val in values]
-        #         values = [1 / item for item in values]      # 需要实现数值越小的元素，被选中的概率越大
-        #         total_value = sum(values)
-        #         probabilities = [values[job] / total_value for job in range(self.config.jobs_num)]
-        #         selected_job = np.random.choice(self.hfs.job_list, p=probabilities)
-        #
-        #     else:  # 使用工件的目标值进行排序
-        #
-        #         values = [self.job_info[job][0] for job in range(self.config.jobs_num)]
-        #         values = [val if val != 0 else 1e-9 for val in values]
-        #         probabilities = np.array(values) / np.sum(values)  # 归一化概率
-        #         selected_job = np.random.choice(self.hfs.job_list, p=probabilities)
-        #
-        # else:
-        #     selected_job = np.random.choice(self.hfs.job_list)
-        #
-        # # 选定工件之后选择另一个需要操作的工件
-        # loca_machine, oper_machine, oper_job = self.chosen_job2_oper(selected_job, stage, method)
+        self.schedule_ins.idle_time_insertion(self.update_schedule, self.job_execute_time, self.obj)
+        job_info = self.schedule_ins.get_job_info(self.job_execute_time)
+        if search_method_1 == 'effe':
+            if stage == 0:  # 使用第二阶段的开始加工时间 - 第一阶段的完工时间的松紧程序进行排序
+                values = [job_info[job][2] for job in range(self.config.jobs_num)]
+                values = [val if val != 0 else 1e-9 for val in values]
+                values = [1 / item for item in values]      # 需要实现数值越小的元素，被选中的概率越大
+                total_value = sum(values)
+                probabilities = [values[job] / total_value for job in range(self.config.jobs_num)]
+                selected_job = np.random.choice(self.hfs.job_list, p=probabilities)
+
+            else:  # 使用工件的目标值进行排序
+
+                values = [job_info[job][0] for job in range(self.config.jobs_num)]
+                values = [val if val != 0 else 1e-9 for val in values]
+                probabilities = np.array(values) / np.sum(values)  # 归一化概率
+                selected_job = np.random.choice(self.hfs.job_list, p=probabilities)
+
+        else:
+            selected_job = np.random.choice(self.hfs.job_list)
+
+        loca_machine, oper_job_list = self.chosen_job2_oper(selected_job, stage, search_method_1, config_same_machine,
+                                                            oper_method)
+        # 选定工件之后选择另一个需要操作的工件
+        # loca_machine, oper_machine, oper_job = self.chosen_job2_oper(selected_job, stage, search_method_2)
 
         '''
             选择并确定工件
@@ -273,112 +277,112 @@ class Neighbo_Search():
         # dia.pre()
         # plt.savefig('./img1203/pic-{}.png'.format(int(1)))
 
-        self.schedule_ins.idle_time_insertion(self.update_schedule, self.job_execute_time, self.obj)
-        selected_job = None
-        if search_method_1 == 'rand':
-            selected_job = np.random.choice(self.hfs.job_list)
-        else:
-            if search_method_2 == 'stuck':
-                stuck_job = {}
-                # 找到所有卡住的工件，根据每单位往前移动的贡献，来权衡
-                for i in self.schedule_ins.schedule_job_block.keys():
-                    for j in self.schedule_ins.schedule_job_block[i]:
-                        if j == self.schedule_ins.schedule_job_block[0]:
-                            continue
-                        if len(j[0][0]):
-                            stuck_job[j[0][0][0]] = j[0][2]
-                sorted_dict = dict(sorted(stuck_job.items(), key=lambda item: item[1], reverse=True))
-                selected_job = list(sorted_dict.keys())[0]
+        # self.schedule_ins.idle_time_insertion(self.update_schedule, self.job_execute_time, self.obj)
+        # selected_job = None
+        # if search_method_1 == 'rand':
+        #     selected_job = np.random.choice(self.hfs.job_list)
+        # else:
+        #     if search_method_2 == 'stuck':
+        #         stuck_job = {}
+        #         # 找到所有卡住的工件，根据每单位往前移动的贡献，来权衡
+        #         for i in self.schedule_ins.schedule_job_block.keys():
+        #             for j in self.schedule_ins.schedule_job_block[i]:
+        #                 if j == self.schedule_ins.schedule_job_block[0]:
+        #                     continue
+        #                 if len(j[0][0]):
+        #                     stuck_job[j[0][0][0]] = j[0][2]
+        #         sorted_dict = dict(sorted(stuck_job.items(), key=lambda item: item[1], reverse=True))
+        #         selected_job = list(sorted_dict.keys())[0]
+        #
+        #     else:
+        #         # 找到可以单纯可以改善最多的方向，
+        #         max_delay_weight = 0
+        #         max_early_weight = 0
+        #         add_delay_weight = np.inf
+        #         add_early_weight = np.inf
+        #         early_exceute_block = []
+        #         delay_exceute_block = []
+        #         find_early_job = True
+        #         need_excute_block = []
+        #         selected_job = None
+        #         if search_method_2[0] == 'I':
+        #             for i in self.schedule_ins.schedule_job_block.keys():
+        #                 for j in self.schedule_ins.schedule_job_block[i]:
+        #                     if j[0][1] > max_early_weight:
+        #                         max_early_weight = j[0][1]
+        #                         early_exceute_block = j[0][0]
+        #                     if j[0][3] > max_delay_weight:
+        #                         max_delay_weight = j[0][3]
+        #                         delay_exceute_block = j[0][0]
+        #             if max_early_weight > max_delay_weight:
+        #                 need_excute_block = early_exceute_block
+        #             else:
+        #                 need_excute_block = delay_exceute_block
+        #                 find_early_job = False
+        #         elif search_method_2[0] == 'A':
+        #             for i in self.schedule_ins.schedule_job_block.keys():
+        #                 for j in self.schedule_ins.schedule_job_block[i]:
+        #                     if j[0][2] < add_early_weight:
+        #                         add_early_weight = j[0][2]
+        #                         early_exceute_block = j[0][0]
+        #                     if j[0][4] < add_delay_weight:
+        #                         add_delay_weight = j[0][4]
+        #                         delay_exceute_block = j[0][0]
+        #             if add_early_weight > add_delay_weight or add_early_weight <= 0 or add_early_weight <= 0:
+        #                 need_excute_block = delay_exceute_block
+        #                 find_early_job = False
+        #             else:
+        #                 need_excute_block = early_exceute_block
+        #         # 在选中的工件块中，选择最好的权重最大的工件块
+        #         if find_early_job:
+        #             early_job = []
+        #             for job in need_excute_block:
+        #                 if self.job_execute_time[(self.config.stages_num - 1, job)] < self.config.ect_windows[job]:
+        #                     early_job.append([job,self.config.ect_weight[job],self.config.job_process_time[stage][job]])
+        #
+        #             if len(early_job):
+        #                 if search_method_2[1] == 'F':
+        #                     selected_job = early_job[-1][0]
+        #
+        #                 elif search_method_2[1] == 'W':
+        #                     if len(early_job) == 1:
+        #                         selected_job = early_job[0][0]
+        #                     else:
+        #                         selected_job = sorted(early_job, key=lambda x: x[1], reverse=True)[0][0]
+        #
+        #                 elif search_method_2[1] == 'P':
+        #                     if len(early_job) == 1:
+        #                         selected_job = early_job[0][0]
+        #                     else:
+        #                         selected_job = sorted(early_job, key=lambda x: x[2])[0][0]
+        #
+        #         else:
+        #             delay_job = []
+        #             for job in need_excute_block:
+        #                 if self.job_execute_time[(self.config.stages_num - 1, job)] >= self.config.ddl_windows[job]:
+        #                     delay_job.append([job,self.config.ddl_weight[job],self.config.job_process_time[stage][job]])
+        #             if len(delay_job):
+        #                 if search_method_2[1] == 'F':
+        #                     selected_job = delay_job[0][0]
+        #
+        #                 elif search_method_2[1] == 'W':
+        #                     if len(delay_job) == 1:
+        #                         selected_job = delay_job[0][0]
+        #                     else:
+        #                         selected_job = sorted(delay_job, key=lambda x: x[1], reverse=True)[0][0]
+        #
+        #                 elif search_method_2[1] == 'P':
+        #                     if len(delay_job) == 1:
+        #                         selected_job = delay_job[0][0]
+        #                     else:
+        #                         selected_job = sorted(delay_job, key=lambda x: x[2])[0][0]
+        #
+        #
+        # if selected_job is None:
+        #     self.schedule_ins.idle_time_insertion(self.schedule, self.job_execute_time, self.obj)
+        #     selected_job = 0
 
-            else:
-                # 找到可以单纯可以改善最多的方向，
-                max_delay_weight = 0
-                max_early_weight = 0
-                add_delay_weight = np.inf
-                add_early_weight = np.inf
-                early_exceute_block = []
-                delay_exceute_block = []
-                find_early_job = True
-                need_excute_block = []
-                selected_job = None
-                if search_method_2[0] == 'I':
-                    for i in self.schedule_ins.schedule_job_block.keys():
-                        for j in self.schedule_ins.schedule_job_block[i]:
-                            if j[0][1] > max_early_weight:
-                                max_early_weight = j[0][1]
-                                early_exceute_block = j[0][0]
-                            if j[0][3] > max_delay_weight:
-                                max_delay_weight = j[0][3]
-                                delay_exceute_block = j[0][0]
-                    if max_early_weight > max_delay_weight:
-                        need_excute_block = early_exceute_block
-                    else:
-                        need_excute_block = delay_exceute_block
-                        find_early_job = False
-                elif search_method_2[0] == 'A':
-                    for i in self.schedule_ins.schedule_job_block.keys():
-                        for j in self.schedule_ins.schedule_job_block[i]:
-                            if j[0][2] < add_early_weight:
-                                add_early_weight = j[0][2]
-                                early_exceute_block = j[0][0]
-                            if j[0][4] < add_delay_weight:
-                                add_delay_weight = j[0][4]
-                                delay_exceute_block = j[0][0]
-                    if add_early_weight > add_delay_weight or add_early_weight <= 0 or add_early_weight <= 0:
-                        need_excute_block = delay_exceute_block
-                        find_early_job = False
-                    else:
-                        need_excute_block = early_exceute_block
-                # 在选中的工件块中，选择最好的权重最大的工件块
-                if find_early_job:
-                    early_job = []
-                    for job in need_excute_block:
-                        if self.job_execute_time[(self.config.stages_num - 1, job)] < self.config.ect_windows[job]:
-                            early_job.append([job,self.config.ect_weight[job],self.config.job_process_time[stage][job]])
-
-                    if len(early_job):
-                        if search_method_2[1] == 'F':
-                            selected_job = early_job[-1][0]
-
-                        elif search_method_2[1] == 'W':
-                            if len(early_job) == 1:
-                                selected_job = early_job[0][0]
-                            else:
-                                selected_job = sorted(early_job, key=lambda x: x[1], reverse=True)[0][0]
-
-                        elif search_method_2[1] == 'P':
-                            if len(early_job) == 1:
-                                selected_job = early_job[0][0]
-                            else:
-                                selected_job = sorted(early_job, key=lambda x: x[2])[0][0]
-
-                else:
-                    delay_job = []
-                    for job in need_excute_block:
-                        if self.job_execute_time[(self.config.stages_num - 1, job)] >= self.config.ddl_windows[job]:
-                            delay_job.append([job,self.config.ddl_weight[job],self.config.job_process_time[stage][job]])
-                    if len(delay_job):
-                        if search_method_2[1] == 'F':
-                            selected_job = delay_job[0][0]
-
-                        elif search_method_2[1] == 'W':
-                            if len(delay_job) == 1:
-                                selected_job = delay_job[0][0]
-                            else:
-                                selected_job = sorted(delay_job, key=lambda x: x[1], reverse=True)[0][0]
-
-                        elif search_method_2[1] == 'P':
-                            if len(delay_job) == 1:
-                                selected_job = delay_job[0][0]
-                            else:
-                                selected_job = sorted(delay_job, key=lambda x: x[2])[0][0]
-
-
-        if selected_job is None:
-            self.schedule_ins.idle_time_insertion(self.schedule, self.job_execute_time, self.obj)
-            selected_job = 0
-
-        loca_machine, oper_job_list = self.chosen_job2_oper(selected_job, stage, search_method_1,config_same_machine,oper_method)
+        # loca_machine, oper_job_list = self.chosen_job2_oper(selected_job, stage, search_method_1,config_same_machine,oper_method)
 
         return loca_machine, selected_job, oper_job_list
 
