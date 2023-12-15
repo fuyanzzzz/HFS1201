@@ -23,18 +23,19 @@ from SS_RL.inital_solution import HFS
 import matplotlib.pyplot as plt
 
 
-N_STATES = 8
+N_STATES = 12
 ACTIONS = ['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswap0','effeswap1','randswap0','randswap1']
 # 1. 生成初始解，这个没有问题
-actions = range(11)
+actions = range(10)
 max_iter = 3
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 pd.reset_option('display.max_rows')
 pd.reset_option('display.max_columns')
 
-q_table = pd.DataFrame(np.random.rand(12, 11),columns=actions)
-
+# q_table = pd.DataFrame(np.random.rand(12, 11),columns=actions)
+q_table = pd.DataFrame(
+            np.zeros((N_STATES, len(actions))),columns=actions)
 
 data_folder = "data"  # 数据文件夹的路径
 # 获取data文件夹下所有的文件名
@@ -57,9 +58,8 @@ while True:
         break
     for index, file_name in enumerate(txt_files):
         time_cost = 0
-        file_name = '1259_Instance_20_2_3_0,6_1_20_Rep4.txt'
         start_time = time.time()
-
+        # file_name = '1258_Instance_20_2_3_0,6_1_20_Rep3.txt'
         # if index == 0:
         #     continue
         print('换数据集啦{0}'.format(file_name))
@@ -68,7 +68,7 @@ while True:
 
         hfs.initial_solu()
 
-        rl_ = RL_Q(N_STATES,ACTIONS,hfs.inital_refset,q_table,file_name)
+        rl_ = RL_Q(N_STATES,ACTIONS,hfs.inital_refset,q_table,file_name,len(txt_files)*iter +index)
         hfs.inital_refset,q_table,delta, REWARD = rl_.rl()
         print(hfs.inital_refset[0][1])
         opt_item = hfs.inital_refset[0]
@@ -86,14 +86,56 @@ while True:
 
         INDEX.append(len(txt_files)*iter +index)
 
-        fp = open('./time_cost.txt', 'a+')
-        if index == 0:
-            print('索引   文件名   耗时  数据最优解   实验最优解 ', file=fp)
-        print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files)*iter +index,file_name,round(duration,2),rl_.config.ture_opt,rl_.best_opt), file=fp)
-        fp.close()
+        # fp = open('./time_cost.txt', 'a+')
+        # if index == 0:
+        #     print('索引   文件名   耗时  数据最优解   实验最优解 ', file=fp)
+        # print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files)*iter +index,file_name,round(duration,2),rl_.config.ture_opt,rl_.best_opt), file=fp)
+        # fp.close()
+
+        with open('./time_cost.txt', 'a+') as fp:
+            # 设置显示选项
+            pd.set_option('display.max_rows', None)
+            pd.set_option('display.max_columns', None)
+
+            # 将 DataFrame 写入文件
+            # print(index, q_table, file=fp)
+
+            if index == 0:
+                print('索引   文件名   耗时  数据最优解   实验最优解 ', file=fp)
+            print()
+            print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files) * iter + index, file_name, round(duration, 2),
+                                                        rl_.config.ture_opt, rl_.best_opt), file=fp)
+            sort_time = 0
+            effe_time = 0
+            rand_time = 0
+            for item in rl_.use_actions.keys():
+                print(item, rl_.use_actions[item],round(rl_.use_actions[item][1]/max(rl_.use_actions[item][0],1),3), file=fp)
+                if item[:4] == 'sort':
+                    sort_time += rl_.use_actions[item][0]
+                elif item[:4] == 'effe':
+                    effe_time += rl_.use_actions[item][0]
+                else:
+                    rand_time += rl_.use_actions[item][0]
+            # print('sort_time    ',sort_time, file=fp)
+            # print('effe_time    ',effe_time, file=fp)
+            # print('rand_time    ',rand_time, file=fp)
+            # print('total_time    ',rand_time+sort_time+effe_time, file=fp)
+            # print('effe_time占比    ',round(effe_time/(rand_time+sort_time+effe_time),2), file=fp)
+            # print('effe_time + rand_time 占比    ',round((effe_time+rand_time)/(rand_time+sort_time+effe_time),2), file=fp)
+            # 重置显示选项为默认值
+            pd.reset_option('display.max_rows')
+            pd.reset_option('display.max_columns')
+
+        # from SS_RL.diagram import job_diagram
+        # import matplotlib.pyplot as plt
+        #
+        # dia = job_diagram(schedule, job_execute_time, file_name, len(txt_files)*iter +index)
+        # dia.pre()
+        # plt.savefig('./img1203/pic-{}.png'.format(len(txt_files)*iter +index))
 
         # 每过一幕验证一下奖励
-        case_file_name = '1259_Instance_20_2_3_0,6_1_20_Rep4.txt'
+        case_file_name = '1258_Instance_20_2_3_0,6_1_20_Rep3.txt'
+        # case_file_name = '1259_Instance_20_2_3_0,6_1_20_Rep4.txt'
         hfs = HFS(case_file_name)
 
         hfs.initial_solu()
@@ -105,11 +147,12 @@ while True:
         # plt.savefig('./img1203/pic-{}.png'.format(index))
         # plt.show()
 
-        rl_ = RL_Q(N_STATES,ACTIONS,hfs.inital_refset,q_table,case_file_name)
+        rl_ = RL_Q(N_STATES,ACTIONS,hfs.inital_refset,q_table,case_file_name,len(txt_files)*iter +index)
         best_opt_execute = rl_.rl_execute()
 
         case_CUM_REWARD.append(best_opt_execute)
         end_time = time.time()
+        duration = end_time - start_time
 
         # from SS_RL.diagram import job_diagram
         # import matplotlib.pyplot as plt
@@ -145,15 +188,17 @@ while True:
             # 调整子图之间的垂直间距
             plt.tight_layout()
             # plt.pause(0.1)  # 用于动态展示图像
-            plt.savefig('./img0.05_1_1210/pic-{}.png'.format(int(len(txt_files)*iter +index)))
+            plt.savefig('./img0.05_1_1214/pic-{}.png'.format(int(len(txt_files)*iter +index)))
 
-            with open('./0.05_1_1210.txt', 'a+') as fp:
+            with open('./0.05_1_1214.txt', 'a+') as fp:
                 # 设置显示选项
                 pd.set_option('display.max_rows', None)
                 pd.set_option('display.max_columns', None)
 
                 # 将 DataFrame 写入文件
                 print(index, q_table, file=fp)
+                for item in rl_.use_actions.keys():
+                    print(item,rl_.use_actions[item], file=fp)
 
                 # 重置显示选项为默认值
                 pd.reset_option('display.max_rows')

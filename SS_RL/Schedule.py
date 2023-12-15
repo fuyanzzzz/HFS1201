@@ -192,6 +192,8 @@ class Schedule_Instance():
                     if len(self.all_job_block)!= 0 and insert_idle_time == idle_2:
                         job_block.extend(self.all_job_block[0][0])
                         self.all_job_block.remove(self.all_job_block[0])
+                    if insert_idle_time == 0:
+                        job_num_machine -= 1
 
                     # 更新工件块内的工件完工时间
                 else:

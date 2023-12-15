@@ -48,7 +48,7 @@ TerminalFlag = "terminal"
 
 
 class RL_Q():
-    def __init__(self,n_states,n_actions,inital_refset,q_table,file_name):
+    def __init__(self,n_states,n_actions,inital_refset,q_table,file_name,iter):
 
         self.trial = 0
         self.ori_mean_obj = 9999999
@@ -67,9 +67,10 @@ class RL_Q():
         # self.q_table = self.build_q_table(n_states,range(7))
         self.q_table = q_table
         # 以下的只是为了统计
-        self.use_actions = {}
+        self.use_actions = {}   # 要放在主函数外，不然会重置掉
         # self.action_space_1 = ['effeinsert0', 'effeinsert1', 'randinsert0', 'randinsert1', 'effeswap0', 'effeswap1',
         #                 'randswap0', 'randswap1']
+        self.iter_index = iter
 
 
         '''
@@ -80,13 +81,17 @@ class RL_Q():
         4. 找到延误工件/早到工件块，按照一定规则【加工时间规则/ddl规则/ect规则/权重规则】进行排序
         '''
 
-        self.action_space_1 = ['effe_insert_same_M_1', 'effe_swap_same_M_1',
-                                'effe_insert_other_M_1', 'effe_swap_other_M_1',
-                                'effe_insert_same_M_0','effe_swap_same_M_0',
-                                'effe_insert_other_M_0','effe_swap_other_M_0',
-                                'rand_insert_same_M_1','rand_insert_same_M_1',
-                                'rand_insert_other_M_1','rand_insert_other_M_1',
-                                'sort_delay_A_P_1','sort_delay_A_D_1','sort_early_D_P_1','sort_early_A_D_1','sort_stuck_A_S0_1']
+        self.action_space_1 = ['effe_insert_same_EM_1', 'effe_swap_same_EM_1',
+                                'effe_insert_other_EM_1', 'effe_swap_other_EM_1',
+                               'effe_insert_same_DM_1', 'effe_swap_same_DM_1',
+                                'effe_insert_other_DM_1', 'effe_swap_other_DM_1',
+                                # 'effe_insert_same_M_0','effe_swap_same_M_0',
+                                # 'effe_insert_other_M_0','effe_swap_other_M_0',
+                                'rand_insert_same_M_1','rand_swap_same_M_1',
+                                'rand_insert_other_M_1','rand_swap_other_M_1',
+                                # 'sort_delay_A_P_1','sort_delay_A_D_1','sort_early_D_P_1','sort_early_A_D_1','sort_stuck_A_S0_1',
+                               'dire_insert_same_dweight_1','dire_insert_same_eweight_1',
+                               'dire_insert_other_dweight_1','dire_insert_other_eweight_1']
         for i_action in self.action_space_1:
             self.use_actions[i_action] =[0, 0, 0]
 
@@ -122,25 +127,34 @@ class RL_Q():
 
         '''
         # 在第二阶段选择目标值最大的工件之一，进行insert/swap操作effe_insert_same_AF_1
-        self.action_space[0] = ['effe_insert_same_M_1', 'effe_swap_same_M_1']     # 同一个机器
-        self.action_space[1] = ['effe_insert_other_M_1', 'effe_swap_other_M_1']     # 不同机器
+        self.action_space[0] = ['effe_insert_same_EM_1', 'effe_swap_same_EM_1']     # 同一个机器
+        self.action_space[1] = ['effe_insert_other_EM_1', 'effe_swap_other_EM_1']     # 不同机器
         # 在第一阶段选择松弛最小的工件之一，进行insert/swap操作
-        self.action_space[2] = ['effe_insert_same_M_0','effe_swap_same_M_0']      # 同一个机器
-        self.action_space[3] = ['effe_insert_other_M_0','effe_swap_other_M_0']      # 同一个机器
+        # self.action_space[2] = ['effe_insert_same_M_0','effe_swap_same_M_0']      # 同一个机器
+        # self.action_space[3] = ['effe_insert_other_M_0','effe_swap_other_M_0']      # 同一个机器
+
+        # 在第二阶段选择目标值最大的工件之一，进行insert/swap操作effe_insert_same_AF_1
+        self.action_space[2] = ['effe_insert_same_DM_1', 'effe_swap_same_DM_1']     # 同一个机器
+        self.action_space[3] = ['effe_insert_other_DM_1', 'effe_swap_other_DM_1']     # 不同机器
+
         # 在第二阶段随机选择工件进行insert/swap:
-        self.action_space[4] = ['rand_insert_same_M_1','rand_insert_same_M_1']      # 同一个机器
-        self.action_space[5] = ['rand_insert_other_M_1','rand_insert_other_M_1']      # 同一个机器
+        self.action_space[4] = ['rand_insert_same_M_1','rand_swap_same_M_1']      # 同一个机器
+        self.action_space[5] = ['rand_insert_other_M_1','rand_swap_other_M_1']      # 同一个机器
 
-        # 第1阶段，单位增加目标值最多的方向的第一个工件，在同一机器/其他机器，进行insert/swap
-        self.action_space[6] = ['sort_delay_A_P_1']
-        self.action_space[7] = ['sort_delay_A_D_1']
-
-        # 第1阶段，单位可改善最多的方向的权重贡献最大的工件，在同一机器/其他机器，进行insert/swap
-        self.action_space[8] = ['sort_early_D_P_1']
-        self.action_space[9] = ['sort_early_A_D_1']
+        # # 第1阶段，单位增加目标值最多的方向的第一个工件，在同一机器/其他机器，进行insert/swap
+        # self.action_space[6] = ['sort_delay_A_P_1']
+        # self.action_space[7] = ['sort_delay_A_D_1']
+        #
+        # # 第1阶段，单位可改善最多的方向的权重贡献最大的工件，在同一机器/其他机器，进行insert/swap
+        # self.action_space[8] = ['sort_early_D_P_1']
+        # self.action_space[9] = ['sort_early_A_D_1']
 
         # 第1阶段，单位可改善最多的方向的加工时间最小的工件，在同一机器/其他机器，进行insert/swap
-        self.action_space[10] = ['sort_stuck_A_S0_1']
+        # self.action_space[10] = ['sort_stuck_A_S0_1']
+        self.action_space[6] = ['dire_insert_same_dweight_1']
+        self.action_space[7] = ['dire_insert_same_eweight_1']
+        self.action_space[8] = ['dire_insert_other_dweight_1']
+        self.action_space[9] = ['dire_insert_other_eweight_1']
 
 
         # # 第0阶段，卡住的工件在同一机器/其他机器，进行insert/swap
@@ -186,11 +200,16 @@ class RL_Q():
         #     else:
         #         action_name = state_table.idxmax()
 
-        if (np.random.uniform() > EPSILON) or ((state_table == 0).all()):
+        # if (np.random.uniform() > EPSILON) or ((state_table == 0).all()):
+        #     action_name = np.random.choice(range(len(self.action_space)))
+        # else:
+        #     action_name = state_table.idxmax()
+
+        if (np.random.uniform() > EPSILON) or ((state_table == 0).all()) or self.iter_index < 100:
             action_name = np.random.choice(range(len(self.action_space)))
         else:
             action_name = state_table.idxmax()
-
+        # action_name = np.random.choice(range(len(self.action_space)))
         return action_name
 
 
@@ -228,10 +247,10 @@ class RL_Q():
         3. 修复的是否同一个机器
         '''
         self.schedule_ins.idle_time_insertion(self.inital_refset[0][0], self.inital_refset[0][2], self.inital_refset[0][1])
-        job_block = []
-        for i in self.schedule_ins.schedule_job_block.keys():
-            for j in self.schedule_ins.schedule_job_block[i]:
-                job_block.append(j)
+        # job_block = []
+        # for i in self.schedule_ins.schedule_job_block.keys():
+        #     for j in self.schedule_ins.schedule_job_block[i]:
+        #         job_block.append(j)
 
         # from SS_RL.diagram import job_diagram
         # import matplotlib.pyplot as plt
@@ -240,32 +259,81 @@ class RL_Q():
         # plt.savefig('./img1203/pic-{}.png'.format(int(1)))
         # plt.show()
 
-        if self.config.machine_num_on_stage[0] < len(job_block):        # 若机器数 < 分段数：说明第一阶段被卡了
-            a = 0
-        else:
-            a = 1
 
+        # 判断第一阶段和第二阶段的松弛度：
+        # 若第二阶段的延误工件1/3位置的工件的松弛度 < 第二阶段的平均加工时间，则表明第二阶段松弛度不够
+        delay_job = []
+        early_job = []
+        job_execute_time = self.inital_refset[0][2]
+        aver_job_process_1 = sum([self.config.job_process_time[1][job] for job in range(self.config.jobs_num)]) / self.config.jobs_num
+        for job in range(self.config.jobs_num):
+            if job_execute_time[(1,job)] > self.config.ddl_windows[job]:
+                slackness = job_execute_time[(1,job)] - self.config.job_process_time[1][job] - job_execute_time[(0,job)]
+                delay_job.append((job,slackness))
+            if job_execute_time[(1,job)] < self.config.ect_windows[job]:
+                early_job.append(job)
+        # 默认优先第二阶段
+        priority_2 = 1
+        # 列表不为空
+        if delay_job:
+            delay_job = sorted(delay_job, key=lambda x: x[-1], reverse=True)  # 降序
+            # 获得1/3位置的工件的松弛度：
+            if round(len(delay_job)//3) < aver_job_process_1:
+                priority_2 = 0
+            else:
+                priority_2 = 1
+        # 若早到工件个数 > 延误工件个数
+        priority_early = 0
+        if len(delay_job) > len(early_job):
+            priority_early = 1
+        else:
+            priority_early = 0
+        # 是否超过10次
+        rand = 0
         if self.trial == 0:
-            b = 0
-        elif self.trial <= 5:
-            b = 1
+            rand = 0
+        elif self.trial < 10:
+            rand = 1
         else:
-            b = 2
+            rand = 2
+        # if self.trial <= 10:
+        #     rand = 1
+        # else:
+        #     rand = 0
 
-        # 修复的是否同一个机器，
-        if len(self.oper_same_machine) == 3 and len(set(self.oper_same_machine)) == 1:
-            c = 0
-        else:
-            c = 1
 
-        return self.state_space[(a,b,c)]
+
+
+
+
+        # if self.config.machine_num_on_stage[0] < len(job_block):        # 若机器数 < 分段数：说明第一阶段被卡了
+        #     a = 0
+        # else:
+        #     a = 1
+        #
+        # if self.trial == 0:
+        #     b = 0
+        # elif self.trial <= 5:
+        #     b = 1
+        # else:
+        #     b = 2
+        #
+        # # 修复的是否同一个机器，
+        # if len(self.oper_same_machine) == 3 and len(set(self.oper_same_machine)) == 1:
+        #     c = 0
+        # else:
+        #     c = 1
+
+        return self.state_space[(priority_2,rand,priority_early)]
 
     def get_reward(self, cur_best_opt,impro_degree,diversity_degree):
         reward = 0
         if (self.best_opt - cur_best_opt) > 0:
             reward = (self.best_opt - cur_best_opt) / self.inital_obj
-        if reward > 0.2:
-            reward = 0.2
+            if reward > 0.2:
+                reward = 0.2
+        else:
+            reward = -0.001
 
         # fp = open('./time_cost.txt', 'a+')
         # print('{0}   {1}   {2}    {3}     {4}'.format(self.file_name,self.best_opt,cur_best_opt,self.inital_obj,self.config.ture_opt), file=fp)
@@ -346,6 +414,10 @@ class RL_Q():
                 search_method_1 = split_list[0]
                 search_method_2 = split_list[3]
                 config_same_machine = split_list[2]
+                if config_same_machine == 'same':
+                    config_same_machine = True
+                if config_same_machine == 'other':
+                    config_same_machine = False
 
 
 
@@ -362,6 +434,7 @@ class RL_Q():
                 # loca_machine, selected_job, oper_machine, oper_job = self.chosen_job(search_method_1, search_method_2,config_same_machine,stage,oper_method)
                 neig_search = neighbo_search.Neighbo_Search(schedule, job_execute_time, obj, self.file_name)
                 if search_method_1 != 'sort':
+                    break_info = False
                     loca_machine, selected_job, oper_job_list = neig_search.chosen_job(search_method_1, search_method_2,
                                                                                        config_same_machine, stage,
                                                                                        oper_method)
@@ -371,7 +444,7 @@ class RL_Q():
                         for job in oper_job_list[key]:
                             oper_job = job
                             neig_search = neighbo_search.Neighbo_Search(schedule, job_execute_time, obj, self.file_name)
-                            update_schedule, update_obj, update_job_execute_time = neig_search.search_opea(oper_method,obj,stage, loca_machine, selected_job, oper_machine, oper_job)
+                            update_schedule, update_obj, update_job_execute_time = neig_search.search_opea(oper_method,obj,stage, loca_machine, selected_job, oper_machine, oper_job,search_method_1)
                             print(0, update_schedule, update_obj)
                             # case_file_name = '1259_Instance_20_2_3_0,6_1_20_Rep4.txt'
                             # dia = job_diagram(update_schedule, update_job_execute_time,
@@ -379,8 +452,14 @@ class RL_Q():
                             # dia.pre()
                             # plt.savefig('./img1203/pic-{}.png'.format(21))
 
-                            if update_obj < obj:
+                            if update_obj == obj and stage == 0 and search_method_1 == 'effe':      # 间接实现两步调
+                                break_info = True
                                 break
+                            if update_obj < obj:
+                                break_info = True
+                                break
+                        if break_info:
+                            break
                 stage = int(split_list[-1])
                 job_block_rule = split_list[1]
                 search_method_1 = split_list[0]
@@ -398,7 +477,7 @@ class RL_Q():
                 # 如果更优，则更新相关参数
 
 
-                if update_obj < obj:
+                if update_obj < obj or (update_obj == obj and stage == 0 and search_method_1 == 'effe'):
                     update = True
                     # print(0,update_schedule,update_obj)
                     print('成功更新-----self.obj:{0},self.update_obj:{1}'.format(obj, update_obj))
@@ -413,6 +492,10 @@ class RL_Q():
                     schedule = update_schedule
                     job_execute_time = update_job_execute_time
                     obj = update_obj
+                    if update_obj == obj and stage == 0 and search_method_1 == 'effe':
+                        i += 1
+                    else:
+                        i += 1
 
                 else:
                     i+=1
@@ -439,7 +522,7 @@ class RL_Q():
             # print('success')
 
     def schedule_split(self,schedule):
-        #
+
         job_on_machine = np.zeros((self.config.stages_num, self.config.jobs_num), dtype=int)
         job_seqence = np.zeros((self.config.stages_num, self.config.jobs_num), dtype=float)
 
@@ -533,7 +616,7 @@ class RL_Q():
 
         # if next_state == 7:
 
-        if self.trial > 10:
+        if self.trial > 15:
             self.max_iter += 1
             self.trial = 0
             for index in range(int(len(self.inital_refset) / 2)):
@@ -564,7 +647,7 @@ class RL_Q():
         ori_trial = 0
         # for episode in range(MAX_EPISODES):
         step_counter = 0
-        S = 7       # 初始状态为0
+        S = 6       # 初始状态为0
         CUM_REWARD = 0
 
         is_terminated = False
