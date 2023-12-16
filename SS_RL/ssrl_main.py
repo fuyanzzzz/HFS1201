@@ -48,6 +48,7 @@ for i_action in action_space:
 q_value_changes = []
 CUM_REWARD = []
 case_CUM_REWARD = []
+case_CUM_obj = []
 INDEX = []
 
 
@@ -86,11 +87,11 @@ while True:
 
         INDEX.append(len(txt_files)*iter +index)
 
-        # fp = open('./time_cost.txt', 'a+')
-        # if index == 0:
-        #     print('索引   文件名   耗时  数据最优解   实验最优解 ', file=fp)
-        # print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files)*iter +index,file_name,round(duration,2),rl_.config.ture_opt,rl_.best_opt), file=fp)
-        # fp.close()
+        fp = open('./time_cost.txt', 'a+')
+        if index == 0:
+            print('索引   文件名   耗时  数据最优解   实验最优解 ', file=fp)
+        print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files)*iter +index,file_name,round(duration,2),rl_.config.ture_opt,rl_.best_opt), file=fp)
+        fp.close()
 
         with open('./time_cost.txt', 'a+') as fp:
             # 设置显示选项
@@ -134,6 +135,8 @@ while True:
         # plt.savefig('./img1203/pic-{}.png'.format(len(txt_files)*iter +index))
 
         # 每过一幕验证一下奖励
+        time_cost = 0
+        start_time = time.time()
         case_file_name = '1258_Instance_20_2_3_0,6_1_20_Rep3.txt'
         # case_file_name = '1259_Instance_20_2_3_0,6_1_20_Rep4.txt'
         hfs = HFS(case_file_name)
@@ -148,11 +151,37 @@ while True:
         # plt.show()
 
         rl_ = RL_Q(N_STATES,ACTIONS,hfs.inital_refset,q_table,case_file_name,len(txt_files)*iter +index)
-        best_opt_execute = rl_.rl_execute()
+        best_opt_execute ,CUM_REWARD_case= rl_.rl_execute()
 
-        case_CUM_REWARD.append(best_opt_execute)
+        case_CUM_obj.append(best_opt_execute)
+        case_CUM_REWARD.append(CUM_REWARD_case)
         end_time = time.time()
         duration = end_time - start_time
+
+        with open('./time_cost.txt', 'a+') as fp:
+            # 设置显示选项
+            pd.set_option('display.max_rows', None)
+            pd.set_option('display.max_columns', None)
+
+            # 将 DataFrame 写入文件
+            # print(index, q_table, file=fp)
+
+            if index == 0:
+                print('索引   文件名   耗时  数据最优解   实验最优解 ', file=fp)
+            print()
+            print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files) * iter + index, case_file_name, round(duration, 2),
+                                                        rl_.config.ture_opt, rl_.best_opt), file=fp)
+            sort_time = 0
+            effe_time = 0
+            rand_time = 0
+            for item in rl_.use_actions.keys():
+                print(item, rl_.use_actions[item],round(rl_.use_actions[item][1]/max(rl_.use_actions[item][0],1),3), file=fp)
+                if item[:4] == 'sort':
+                    sort_time += rl_.use_actions[item][0]
+                elif item[:4] == 'effe':
+                    effe_time += rl_.use_actions[item][0]
+                else:
+                    rand_time += rl_.use_actions[item][0]
 
         # from SS_RL.diagram import job_diagram
         # import matplotlib.pyplot as plt
@@ -188,9 +217,9 @@ while True:
             # 调整子图之间的垂直间距
             plt.tight_layout()
             # plt.pause(0.1)  # 用于动态展示图像
-            plt.savefig('./img0.05_1_1214/pic-{}.png'.format(int(len(txt_files)*iter +index)))
+            plt.savefig('./img0.05_1_1215/pic-{}.png'.format(int(len(txt_files)*iter +index)))
 
-            with open('./0.05_1_1214.txt', 'a+') as fp:
+            with open('./0.05_1_1215.txt', 'a+') as fp:
                 # 设置显示选项
                 pd.set_option('display.max_rows', None)
                 pd.set_option('display.max_columns', None)

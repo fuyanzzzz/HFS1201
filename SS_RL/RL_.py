@@ -85,13 +85,16 @@ class RL_Q():
                                 'effe_insert_other_EM_1', 'effe_swap_other_EM_1',
                                'effe_insert_same_DM_1', 'effe_swap_same_DM_1',
                                 'effe_insert_other_DM_1', 'effe_swap_other_DM_1',
-                                # 'effe_insert_same_M_0','effe_swap_same_M_0',
-                                # 'effe_insert_other_M_0','effe_swap_other_M_0',
+                                'effe_insert_same_M_0','effe_swap_same_M_0',
+                                'effe_insert_other_M_0','effe_swap_other_M_0',
                                 'rand_insert_same_M_1','rand_swap_same_M_1',
                                 'rand_insert_other_M_1','rand_swap_other_M_1',
+                               'effe_insert_same_DRM_1', 'effe_swap_same_DRM_1',
+                               'effe_insert_other_DRM_1', 'effe_swap_other_DRM_1',
                                 # 'sort_delay_A_P_1','sort_delay_A_D_1','sort_early_D_P_1','sort_early_A_D_1','sort_stuck_A_S0_1',
                                'dire_insert_same_dweight_1','dire_insert_same_eweight_1',
                                'dire_insert_other_dweight_1','dire_insert_other_eweight_1']
+
         for i_action in self.action_space_1:
             self.use_actions[i_action] =[0, 0, 0]
 
@@ -127,8 +130,8 @@ class RL_Q():
 
         '''
         # 在第二阶段选择目标值最大的工件之一，进行insert/swap操作effe_insert_same_AF_1
-        self.action_space[0] = ['effe_insert_same_EM_1', 'effe_swap_same_EM_1']     # 同一个机器
-        self.action_space[1] = ['effe_insert_other_EM_1', 'effe_swap_other_EM_1']     # 不同机器
+        # self.action_space[0] = ['effe_insert_same_EM_1', 'effe_swap_same_EM_1']     # 同一个机器
+        # self.action_space[1] = ['effe_insert_other_EM_1', 'effe_swap_other_EM_1']     # 不同机器
         # 在第一阶段选择松弛最小的工件之一，进行insert/swap操作
         # self.action_space[2] = ['effe_insert_same_M_0','effe_swap_same_M_0']      # 同一个机器
         # self.action_space[3] = ['effe_insert_other_M_0','effe_swap_other_M_0']      # 同一个机器
@@ -151,10 +154,15 @@ class RL_Q():
 
         # 第1阶段，单位可改善最多的方向的加工时间最小的工件，在同一机器/其他机器，进行insert/swap
         # self.action_space[10] = ['sort_stuck_A_S0_1']
-        self.action_space[6] = ['dire_insert_same_dweight_1']
-        self.action_space[7] = ['dire_insert_same_eweight_1']
-        self.action_space[8] = ['dire_insert_other_dweight_1']
-        self.action_space[9] = ['dire_insert_other_eweight_1']
+        self.action_space[1] = ['dire_insert_same_dweight_1']
+        # self.action_space[7] = ['dire_insert_same_eweight_1']
+        self.action_space[0] = ['dire_insert_other_dweight_1']
+        # self.action_space[9] = ['dire_insert_other_eweight_1']
+
+        self.action_space[6] = ['effe_insert_same_DRM_1','effe_swap_same_DRM_1']      # 同一个机器
+        self.action_space[7] = ['effe_insert_other_DRM_1','effe_swap_other_DRM_1']      # 同一个机器
+        self.action_space[8] = ['effe_insert_same_M_0','effe_swap_same_M_0']      # 同一个机器
+        self.action_space[9] = ['effe_insert_other_M_0','effe_swap_other_M_0']      # 同一个机器
 
 
         # # 第0阶段，卡住的工件在同一机器/其他机器，进行insert/swap
@@ -205,11 +213,11 @@ class RL_Q():
         # else:
         #     action_name = state_table.idxmax()
 
-        if (np.random.uniform() > EPSILON) or ((state_table == 0).all()) or self.iter_index < 100:
-            action_name = np.random.choice(range(len(self.action_space)))
-        else:
-            action_name = state_table.idxmax()
-        # action_name = np.random.choice(range(len(self.action_space)))
+        # if (np.random.uniform() > EPSILON) or ((state_table == 0).all()) or self.iter_index < 100:
+        #     action_name = np.random.choice(range(len(self.action_space)))
+        # else:
+        #     action_name = state_table.idxmax()
+        action_name = np.random.choice(range(len(self.action_space)))
         return action_name
 
 
@@ -696,7 +704,7 @@ class RL_Q():
             S = S_
             step_counter += 1
 
-        return min([self.inital_refset[i][1] for i in range(len(self.inital_refset))])
+        return min([self.inital_refset[i][1] for i in range(len(self.inital_refset))]),CUM_REWARD
 
 # if __name__ == '__main__':
 #     rlll = RL_Q(8, ACTIONS)

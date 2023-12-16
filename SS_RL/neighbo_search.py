@@ -43,7 +43,13 @@ class Neighbo_Search():
 
     def insert_opera(self, stage, loca_machine, loca_job, oper_machine, oper_job,search_method_1):
 
+        loca_job_index = self.update_schedule[(stage, loca_machine)].index(loca_job)
+        if loca_job_index+1 < len(self.update_schedule[(stage, loca_machine)]):
+            loca_job_later_ = self.update_schedule[(stage, loca_machine)][loca_job_index+1]
+        else:
+            loca_job_later_ = loca_job
         self.update_schedule[(stage, loca_machine)].remove(loca_job)
+
         oper_job_index = self.update_schedule[(stage, oper_machine)].index(oper_job)
 
 
@@ -68,6 +74,56 @@ class Neighbo_Search():
                 self.update_schedule[(0, stage_0_loca_job_machine)].remove(loca_job)
                 self.update_schedule[(0, stage_0_loca_job_machine)].append(loca_job)
 
+            # 如果因此此次的操作导致有新的工件卡住，则在第一阶段的所有机器中选择一个松弛度最高的机器插入
+            self.re_cal(self.update_schedule)
+            if stage == 1 and loca_job_index < len(self.update_schedule[(0, loca_machine)]):
+                loca_job_later_index = self.update_schedule[(stage, loca_machine)].index(loca_job_later_)
+                for job in self.update_schedule[(0, loca_machine)][loca_job_later_index:]:
+                    # 如果有工件卡住，才会进入到这个if条件中，且一旦进入一次，就会跳出
+                    max_slackness_job = None
+                    max_slackness_job_machine = None
+                    max_slackness = 0
+                    if self.update_job_execute_time[(stage,job)] - self.config.job_process_time[stage][job] == \
+                    self.update_job_execute_time[(0,job)]:
+                        # 判断这个卡住的工件在第一阶段的哪台机器
+                        for machine in range(self.config.machine_num_on_stage[0]):
+                            for i_job in self.update_schedule[(0, machine)]:
+                                if i_job == job:
+                                    job_machine = machine
+                        for machine in range(self.config.machine_num_on_stage[0]):
+                            for i_job in self.update_schedule[(0, machine)]:
+
+                                if (self.job_execute_time[(0, i_job)] - self.config.job_process_time[0][i_job]) < \
+                                        (self.job_execute_time[(0, job)] - self.config.job_process_time[0][
+                                            job]) \
+                                        and i_job != self.update_schedule[(0, machine)][-1]:
+                                    continue
+                                elif (self.job_execute_time[(0, i_job)] - self.config.job_process_time[0][i_job]) < \
+                                        (self.job_execute_time[(0, job)] - self.config.job_process_time[0][
+                                            job]) \
+                                        and i_job == self.update_schedule[(0, machine)][-1]:
+                                    slackness_i_job = self.update_job_execute_time[(1,i_job)] - self.config.job_process_time[1][i_job] - self.update_job_execute_time[(0,i_job)]
+                                    if slackness_i_job > max_slackness:
+                                        max_slackness = slackness_i_job
+                                        max_slackness_job = i_job
+                                        max_slackness_job_machine = machine
+                                else:
+                                    # oper_job_list[machine] = self.update_schedule[(stage, machine)][:index]
+
+                                    pre_index = self.update_schedule[(0, machine)].index(i_job) - 1
+                                    if pre_index >= 0:
+                                        pre_job = self.update_schedule[(0, machine)][pre_index]
+                                        slackness_i_job = self.update_job_execute_time[(1, pre_job)] - \
+                                                          self.config.job_process_time[1][pre_job] - \
+                                                          self.update_job_execute_time[(0, pre_job)]
+                                        if slackness_i_job > max_slackness:
+                                            max_slackness = slackness_i_job
+                                            max_slackness_job = pre_job
+                                            max_slackness_job_machine = machine
+                        self.swap_opera(0, max_slackness_job_machine, max_slackness_job, job_machine, job)
+                        break
+
+
         else:
             if oper_job_index == len(self.update_schedule[(stage, oper_machine)]) - 1:
                 i = np.random.choice([0, 1])
@@ -81,16 +137,16 @@ class Neighbo_Search():
             # 判断现在两个工件第二阶段的开始加工时间，谁在先：
             self.re_cal(self.update_schedule)
 
-            if (self.job_execute_time[(1,loca_job)] - self.config.job_process_time[1][loca_job]) <\
-            (self.job_execute_time[(1, oper_job)] - self.config.job_process_time[1][oper_job]):
+            if (self.update_job_execute_time[(1,loca_job)] - self.config.job_process_time[1][loca_job]) <\
+            (self.update_job_execute_time[(1, oper_job)] - self.config.job_process_time[1][oper_job]):
                 per_job = loca_job
                 later_job = oper_job
             else:
                 per_job = oper_job
                 later_job = loca_job
 
-            if (self.job_execute_time[(0,per_job)] - self.config.job_process_time[1][per_job]) >\
-            (self.job_execute_time[(0, later_job)] - self.config.job_process_time[1][later_job]):
+            if (self.update_job_execute_time[(0,per_job)] - self.config.job_process_time[0][per_job]) >\
+            (self.update_job_execute_time[(0, later_job)] - self.config.job_process_time[0][later_job]):
                 # 找到这两个工件所在的机器
                 per_job_machine = None
                 later_job_machine = None
@@ -192,7 +248,7 @@ class Neighbo_Search():
         for machine in range(self.config.machine_num_on_stage[stage]):
             if selected_job in self.update_schedule[(stage, machine)]:
                 loca_machine = machine
-        max_job_execute_time = 0
+        min_job_execute_time = np.inf
         oper_machine = None
         if search_method_1 == 'dire':
             if config_same_machine:
@@ -202,8 +258,8 @@ class Neighbo_Search():
                 for machine in oper_machine_list:
                     if machine == loca_machine:
                         continue
-                    if len(self.update_schedule[(stage, machine)])>0 and max_job_execute_time < self.job_execute_time[(1,self.update_schedule[(stage, machine)][-1])]:
-                        max_job_execute_time = self.job_execute_time[(1,self.update_schedule[(stage, machine)][-1])]
+                    if len(self.update_schedule[(stage, machine)])>0 and min_job_execute_time > self.job_execute_time[(1,self.update_schedule[(stage, machine)][-1])]:
+                        min_job_execute_time = self.job_execute_time[(1,self.update_schedule[(stage, machine)][-1])]
                         oper_machine = machine
                 oper_job_list[oper_machine] = [self.update_schedule[(stage, oper_machine)][-1]]
 
@@ -217,14 +273,18 @@ class Neighbo_Search():
 
             if config_same_machine:
                 oper_machine = loca_machine
+                oper_job_list[oper_machine] = []
                 # if self.update_schedule[(stage, loca_machine)][-1] == selected_job:
                 #     oper_job = None
                 # else:
                 selected_job_index = self.update_schedule[(stage, loca_machine)].index(selected_job)
                 if job_flag == 1:
-                    oper_job_list[oper_machine] = self.update_schedule[(stage, loca_machine)][:selected_job_index]
+                    # oper_job_list[oper_machine] = self.update_schedule[(stage, loca_machine)][:selected_job_index]
+                    if selected_job_index-1 >= 0:
+                        oper_job_list[oper_machine] = [self.update_schedule[(stage, loca_machine)][selected_job_index-1]]
                 elif job_flag == -1:
-                    oper_job_list[oper_machine] = self.update_schedule[(stage, loca_machine)][selected_job_index+1:]
+                    if selected_job_index+1 < len(self.update_schedule[(stage, loca_machine)]):
+                        oper_job_list[oper_machine]= [self.update_schedule[(stage, loca_machine)][selected_job_index+1]]
                 else:
                     oper_job_list[oper_machine] = self.update_schedule[(stage, loca_machine)][:selected_job_index] + self.update_schedule[(stage, loca_machine)][selected_job_index+1:]
 
@@ -247,13 +307,16 @@ class Neighbo_Search():
                 for machine in oper_machine_list:
                     if machine == loca_machine:
                         continue
+                    oper_job_list[machine] = []
                     for index, job in enumerate(self.update_schedule[(stage, machine)]):
                         if job_flag == -1:      # 既然是早到工件，去到其他机器上，开始加工时间需要>当前机器上的开始加工时间
                             if (self.job_execute_time[(stage, job)] - self.config.job_process_time[stage][job]) < \
                                     (self.job_execute_time[(stage, selected_job)] - self.config.job_process_time[stage][selected_job]):
                                 continue
                             else:
-                                oper_job_list[machine] = self.update_schedule[(stage, machine)][index+1:]
+                                # oper_job_list[machine] = self.update_schedule[(stage, machine)][index+1:]
+                                if index+1< len(self.update_schedule[(stage, machine)]):
+                                    oper_job_list[machine] = [self.update_schedule[(stage, machine)][index+1]]
                                 if len(oper_job_list[machine]) == 0:
                                     oper_job_list[machine].append(self.update_schedule[(stage, machine)][-1])
                                 break
@@ -262,8 +325,13 @@ class Neighbo_Search():
                                     (self.job_execute_time[(stage, selected_job)] - self.config.job_process_time[stage][selected_job]) \
                                     and job!=self.update_schedule[(stage, machine)][-1]:
                                 continue
+                            elif (self.job_execute_time[(stage, job)] - self.config.job_process_time[stage][job]) < \
+                                    (self.job_execute_time[(stage, selected_job)] - self.config.job_process_time[stage][selected_job]) \
+                                    and job==self.update_schedule[(stage, machine)][-1]:
+                                oper_job_list[machine] = [self.update_schedule[(stage, machine)][index]]
                             else:
-                                oper_job_list[machine] = self.update_schedule[(stage, machine)][:index]
+                                # oper_job_list[machine] = self.update_schedule[(stage, machine)][:index]
+                                oper_job_list[machine] = [self.update_schedule[(stage, machine)][index-1]]
                                 if len(oper_job_list[machine]) == 0:
                                     oper_job_list[machine].append(self.update_schedule[(stage, machine)][0])
                                 break
@@ -362,21 +430,41 @@ class Neighbo_Search():
         self.schedule_ins.idle_time_insertion(self.update_schedule, self.job_execute_time, self.obj)
         job_info = self.schedule_ins.get_job_info(self.job_execute_time)
         if search_method_1 == 'effe':
-            if stage == 0:  # 使用第二阶段的开始加工时间 - 第一阶段的完工时间的松紧程序进行排序
-                # values = [job_info[job][2] for job in range(self.config.jobs_num)]
-                values = []
-                for job in range(self.config.jobs_num):
-                    slackness_1 = self.job_execute_time[(0,job)] - self.config.job_process_time[0][job]
-                    if job_info[job][2] == 0 and slackness_1 == 0:
-                        values.append(0)
-                    else:
-                        values.append(slackness_1/max(job_info[job][2],1e-9))
-                values = [val if val != 0 else 1e-9 for val in values]
-                # values = [1 / item for item in values]      # 需要实现数值越小的元素，被选中的概率越大
-                # total_value = sum(values)       # 数值越大，被选中的概率越大
-                # probabilities = [values[job] / total_value for job in range(self.config.jobs_num)]
-                # selected_job = np.random.choice(self.hfs.job_list, p=probabilities)
-                selected_job = values.index(max(values))
+            if stage == 0: # 判断是否造成第二阶段卡住，优先处理前面的卡住
+                min_stuck_job = None
+                min_stuck_time = np.inf
+                for i_machine in range(self.config.machine_num_on_stage[0]):
+                    for i_job in self.update_schedule[(stage,i_machine)]:
+                        # 这个时候的self.update_job_execute_time的值还全部是0
+                        if i_job != self.update_schedule[(stage,i_machine)][0] and self.job_execute_time[(1,i_job)] - \
+                                self.config.job_process_time[1][i_job] == self.job_execute_time[(stage,i_job)]:
+                            # 若该工件不是第一个工件，说明这个工件卡住了，选择最前面的卡住工件
+                            if self.update_schedule[(stage,i_machine)][0] and self.job_execute_time[(1,i_job)] < min_stuck_time:
+                                min_stuck_time = self.update_schedule[(stage,i_machine)][0] and self.job_execute_time[(1,i_job)]
+                                min_stuck_job = i_job
+                if min_stuck_job or min_stuck_job == 0:
+                    selected_job = min_stuck_job
+                else:
+                    selected_job = 0
+
+
+
+
+            # if stage == 0:  # 使用第二阶段的开始加工时间 - 第一阶段的完工时间的松紧程序进行排序
+                # # values = [job_info[job][2] for job in range(self.config.jobs_num)]
+                # values = []
+                # for job in range(self.config.jobs_num):
+                #     slackness_1 = self.job_execute_time[(0,job)] - self.config.job_process_time[0][job]
+                #     if job_info[job][2] == 0 and slackness_1 == 0:
+                #         values.append(0)
+                #     else:
+                #         values.append(slackness_1/max(job_info[job][2],1e-9))
+                # values = [val if val != 0 else 1e-9 for val in values]
+                # # values = [1 / item for item in values]      # 需要实现数值越小的元素，被选中的概率越大
+                # # total_value = sum(values)       # 数值越大，被选中的概率越大
+                # # probabilities = [values[job] / total_value for job in range(self.config.jobs_num)]
+                # # selected_job = np.random.choice(self.hfs.job_list, p=probabilities)
+                # selected_job = values.index(max(values))
 
             # else:  # 使用工件的目标值进行排序
             #
@@ -385,23 +473,31 @@ class Neighbo_Search():
             #     probabilities = np.array(values) / np.sum(values)  # 归一化概率
             #     selected_job = np.random.choice(self.hfs.job_list, p=probabilities)
             else:    # 使用工件的目标值*工件的松弛度【ddl-第一阶段加工时间 - 第二阶段加工时间】
-                values = []
-                for job in range(self.config.jobs_num):
-                    slackness_all = self.config.ddl_windows[job] - self.config.job_process_time[0][job] - self.config.job_process_time[1][job]
-                    slackness_2 = job_info[job][2]
-                    # values.append(max(slackness_all,0)*job_info[job][0]*slackness_2)
-                    if search_method_2[0] == 'E':
-                        if job_info[job][-1] == 1:
-                            slackness_2 = 0
-                        values.append(job_info[job][0]*slackness_2)
-                    if search_method_2[0] == 'D':
-                        if job_info[job][-1] == -1:
-                            slackness_2 = 0
-                        values.append(job_info[job][0] * slackness_2)
-                values = [val if val != 0 else 1e-9 for val in values]
-                # probabilities = np.array(values) / np.sum(values)  # 归一化概率
-                # selected_job = np.random.choice(self.hfs.job_list, p=probabilities)
-                selected_job = values.index(max(values))
+                if search_method_2 == 'DRM':
+                    values = [job_info[job][0] for job in range(self.config.jobs_num)]
+                    values = [val if val != 0 else 1e-9 for val in values]
+                    probabilities = np.array(values) / np.sum(values)  # 归一化概率
+                    selected_job = np.random.choice(self.hfs.job_list, p=probabilities)
+                else:
+                    values = []
+                    for job in range(self.config.jobs_num):
+                        slackness_all = self.config.ddl_windows[job] - self.config.job_process_time[0][job] - self.config.job_process_time[1][job]
+                        slackness_2 = job_info[job][2]
+                        # values.append(max(slackness_all,0)*job_info[job][0]*slackness_2)
+                        if search_method_2[0] == 'E':
+                            if job_info[job][-1] == 1:
+                                slackness_2 = 0
+                            # values.append(job_info[job][0]*slackness_2)
+                            values.append(job_info[job][0])
+                        if search_method_2[0] == 'D':
+                            if job_info[job][-1] == -1:
+                                slackness_2 = 0
+                            # values.append(job_info[job][0] * slackness_2)
+                            values.append(job_info[job][0])
+                    values = [val if val != 0 else 1e-9 for val in values]
+                    # probabilities = np.array(values) / np.sum(values)  # 归一化概率
+                    # selected_job = np.random.choice(self.hfs.job_list, p=probabilities)
+                    selected_job = values.index(max(values))
         elif search_method_1 == 'dire':
             all_jobs = []
             all_jobs_info = []
