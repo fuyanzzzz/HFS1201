@@ -38,8 +38,8 @@ ACTIONS =['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswap0','e
 action_set = ['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswap0','effeswap1','randswap0','randswap1']
 EPSILON = 0.9
 # ALPHA = 0.1
-ALPHA = 0.05
-GAMMA = 1
+ALPHA = 0.1
+GAMMA = 0.9
 MAX_EPISODES = 15
 FRESH_TIME = 0.3
 TerminalFlag = "terminal"
@@ -81,19 +81,14 @@ class RL_Q():
         4. 找到延误工件/早到工件块，按照一定规则【加工时间规则/ddl规则/ect规则/权重规则】进行排序
         '''
 
-        self.action_space_1 = ['effe_insert_same_EM_1', 'effe_swap_same_EM_1',
-                                'effe_insert_other_EM_1', 'effe_swap_other_EM_1',
-                               'effe_insert_same_DM_1', 'effe_swap_same_DM_1',
-                                'effe_insert_other_DM_1', 'effe_swap_other_DM_1',
-                                'effe_insert_same_M_0','effe_swap_same_M_0',
-                                'effe_insert_other_M_0','effe_swap_other_M_0',
-                                'rand_insert_same_M_1','rand_swap_same_M_1',
-                                'rand_insert_other_M_1','rand_swap_other_M_1',
-                               'effe_insert_same_DRM_1', 'effe_swap_same_DRM_1',
-                               'effe_insert_other_DRM_1', 'effe_swap_other_DRM_1',
-                                # 'sort_delay_A_P_1','sort_delay_A_D_1','sort_early_D_P_1','sort_early_A_D_1','sort_stuck_A_S0_1',
-                               'dire_insert_same_dweight_1','dire_insert_same_eweight_1',
-                               'dire_insert_other_dweight_1','dire_insert_other_eweight_1']
+        self.action_space_1 = ['effe_insert_same_DM_1', 'effe_swap_same_DM_1', 'effe_insert_other_DM_1', 'effe_swap_other_DM_1',
+        'effe_insert_same_EM_1', 'effe_swap_same_EM_1', 'effe_insert_other_EM_1', 'effe_swap_other_EM_1',
+        'rand_insert_same_M_1', 'rand_swap_same_M_1', 'rand_insert_other_M_1', 'rand_swap_other_M_1',
+        'effe_insert_same_M_0', 'effe_swap_same_M_0', 'effe_insert_other_M_0', 'effe_swap_other_M_0',
+        'dire_insert_same_dweight_1', 'dire_insert_other_dweight_1',
+        'dire_insert_same_eweight_1', 'dire_insert_other_eweight_1',
+        'effe_insert_same_DRM_1', 'effe_swap_same_DRM_1', 'effe_insert_other_DRM_1', 'effe_swap_other_DRM_1',
+        'effe_insert_same_ERM_1', 'effe_swap_same_ERM_1', 'effe_insert_other_ERM_1', 'effe_swap_other_ERM_1']
 
         for i_action in self.action_space_1:
             self.use_actions[i_action] =[0, 0, 0]
@@ -106,8 +101,8 @@ class RL_Q():
 
 
         # 创建字典
-        self.state_space = dict(zip(combinations, list(range(len(combinations)))))
-        print(1)
+        # self.state_space = dict(zip(combinations, list(range(len(combinations)))))
+        # print(1)
 
 
 
@@ -137,32 +132,27 @@ class RL_Q():
         # self.action_space[3] = ['effe_insert_other_M_0','effe_swap_other_M_0']      # 同一个机器
 
         # 在第二阶段选择目标值最大的工件之一，进行insert/swap操作effe_insert_same_AF_1
-        self.action_space[2] = ['effe_insert_same_DM_1', 'effe_swap_same_DM_1']     # 同一个机器
-        self.action_space[3] = ['effe_insert_other_DM_1', 'effe_swap_other_DM_1']     # 不同机器
+        self.action_space[1] = ['effe_insert_same_DM_1', 'effe_swap_same_DM_1','effe_insert_other_DM_1', 'effe_swap_other_DM_1']     # 同一个机器
+
+        self.action_space[2] = ['effe_insert_same_EM_1', 'effe_swap_same_EM_1','effe_insert_other_EM_1', 'effe_swap_other_EM_1']     # 同一个机器
 
         # 在第二阶段随机选择工件进行insert/swap:
-        self.action_space[4] = ['rand_insert_same_M_1','rand_swap_same_M_1']      # 同一个机器
-        self.action_space[5] = ['rand_insert_other_M_1','rand_swap_other_M_1']      # 同一个机器
+        self.action_space[3] = ['rand_insert_same_M_1','rand_swap_same_M_1','rand_insert_other_M_1','rand_swap_other_M_1']      # 同一个机器
+        self.action_space[4] = ['effe_insert_same_M_0','effe_swap_same_M_0','effe_insert_other_M_0','effe_swap_other_M_0']      # 同一个机器
 
-        # # 第1阶段，单位增加目标值最多的方向的第一个工件，在同一机器/其他机器，进行insert/swap
-        # self.action_space[6] = ['sort_delay_A_P_1']
-        # self.action_space[7] = ['sort_delay_A_D_1']
-        #
-        # # 第1阶段，单位可改善最多的方向的权重贡献最大的工件，在同一机器/其他机器，进行insert/swap
-        # self.action_space[8] = ['sort_early_D_P_1']
-        # self.action_space[9] = ['sort_early_A_D_1']
 
         # 第1阶段，单位可改善最多的方向的加工时间最小的工件，在同一机器/其他机器，进行insert/swap
         # self.action_space[10] = ['sort_stuck_A_S0_1']
-        self.action_space[1] = ['dire_insert_same_dweight_1']
-        # self.action_space[7] = ['dire_insert_same_eweight_1']
-        self.action_space[0] = ['dire_insert_other_dweight_1']
-        # self.action_space[9] = ['dire_insert_other_eweight_1']
+        self.action_space[5] = ['dire_insert_same_dweight_1','dire_insert_other_dweight_1']
 
-        self.action_space[6] = ['effe_insert_same_DRM_1','effe_swap_same_DRM_1']      # 同一个机器
-        self.action_space[7] = ['effe_insert_other_DRM_1','effe_swap_other_DRM_1']      # 同一个机器
-        self.action_space[8] = ['effe_insert_same_M_0','effe_swap_same_M_0']      # 同一个机器
-        self.action_space[9] = ['effe_insert_other_M_0','effe_swap_other_M_0']      # 同一个机器
+        self.action_space[6] = ['dire_insert_same_eweight_1','dire_insert_other_eweight_1']
+
+        self.action_space[7] = ['effe_insert_same_DRM_1','effe_swap_same_DRM_1','effe_insert_other_DRM_1','effe_swap_other_DRM_1']      # 同一个机器
+
+
+        self.action_space[0] = ['effe_insert_same_ERM_1','effe_swap_same_ERM_1','effe_insert_other_ERM_1','effe_swap_other_ERM_1']      # 同一个机器
+
+
 
 
         # # 第0阶段，卡住的工件在同一机器/其他机器，进行insert/swap
@@ -213,10 +203,10 @@ class RL_Q():
         # else:
         #     action_name = state_table.idxmax()
 
-        # if (np.random.uniform() > EPSILON) or ((state_table == 0).all()) or self.iter_index < 100:
-        #     action_name = np.random.choice(range(len(self.action_space)))
-        # else:
-        #     action_name = state_table.idxmax()
+        if (np.random.uniform() > EPSILON) or ((state_table == 0).all()) or self.iter_index < 50:
+            action_name = np.random.choice(range(len(self.action_space)))
+        else:
+            action_name = state_table.idxmax()
         action_name = np.random.choice(range(len(self.action_space)))
         return action_name
 
@@ -254,7 +244,7 @@ class RL_Q():
         2. 几代不优
         3. 修复的是否同一个机器
         '''
-        self.schedule_ins.idle_time_insertion(self.inital_refset[0][0], self.inital_refset[0][2], self.inital_refset[0][1])
+        # self.schedule_ins.idle_time_insertion(self.inital_refset[0][0], self.inital_refset[0][2], self.inital_refset[0][1])
         # job_block = []
         # for i in self.schedule_ins.schedule_job_block.keys():
         #     for j in self.schedule_ins.schedule_job_block[i]:
@@ -267,43 +257,43 @@ class RL_Q():
         # plt.savefig('./img1203/pic-{}.png'.format(int(1)))
         # plt.show()
 
-
-        # 判断第一阶段和第二阶段的松弛度：
-        # 若第二阶段的延误工件1/3位置的工件的松弛度 < 第二阶段的平均加工时间，则表明第二阶段松弛度不够
-        delay_job = []
-        early_job = []
-        job_execute_time = self.inital_refset[0][2]
-        aver_job_process_1 = sum([self.config.job_process_time[1][job] for job in range(self.config.jobs_num)]) / self.config.jobs_num
-        for job in range(self.config.jobs_num):
-            if job_execute_time[(1,job)] > self.config.ddl_windows[job]:
-                slackness = job_execute_time[(1,job)] - self.config.job_process_time[1][job] - job_execute_time[(0,job)]
-                delay_job.append((job,slackness))
-            if job_execute_time[(1,job)] < self.config.ect_windows[job]:
-                early_job.append(job)
-        # 默认优先第二阶段
-        priority_2 = 1
-        # 列表不为空
-        if delay_job:
-            delay_job = sorted(delay_job, key=lambda x: x[-1], reverse=True)  # 降序
-            # 获得1/3位置的工件的松弛度：
-            if round(len(delay_job)//3) < aver_job_process_1:
-                priority_2 = 0
-            else:
-                priority_2 = 1
-        # 若早到工件个数 > 延误工件个数
-        priority_early = 0
-        if len(delay_job) > len(early_job):
-            priority_early = 1
-        else:
-            priority_early = 0
-        # 是否超过10次
-        rand = 0
-        if self.trial == 0:
-            rand = 0
-        elif self.trial < 10:
-            rand = 1
-        else:
-            rand = 2
+        #
+        # # 判断第一阶段和第二阶段的松弛度：
+        # # 若第二阶段的延误工件1/3位置的工件的松弛度 < 第二阶段的平均加工时间，则表明第二阶段松弛度不够
+        # delay_job = []
+        # early_job = []
+        # job_execute_time = self.inital_refset[0][2]
+        # aver_job_process_1 = sum([self.config.job_process_time[1][job] for job in range(self.config.jobs_num)]) / self.config.jobs_num
+        # for job in range(self.config.jobs_num):
+        #     if job_execute_time[(1,job)] > self.config.ddl_windows[job]:
+        #         slackness = job_execute_time[(1,job)] - self.config.job_process_time[1][job] - job_execute_time[(0,job)]
+        #         delay_job.append((job,slackness))
+        #     if job_execute_time[(1,job)] < self.config.ect_windows[job]:
+        #         early_job.append(job)
+        # # 默认优先第二阶段
+        # priority_2 = 1
+        # # 列表不为空
+        # if delay_job:
+        #     delay_job = sorted(delay_job, key=lambda x: x[-1], reverse=True)  # 降序
+        #     # 获得1/3位置的工件的松弛度：
+        #     if round(len(delay_job)//3) < aver_job_process_1:
+        #         priority_2 = 0
+        #     else:
+        #         priority_2 = 1
+        # # 若早到工件个数 > 延误工件个数
+        # priority_early = 0
+        # if len(delay_job) > len(early_job):
+        #     priority_early = 1
+        # else:
+        #     priority_early = 0
+        # # 是否超过10次
+        # rand = 0
+        # if self.trial == 0:
+        #     rand = 0
+        # elif self.trial < 10:
+        #     rand = 1
+        # else:
+        #     rand = 2
         # if self.trial <= 10:
         #     rand = 1
         # else:
@@ -332,16 +322,63 @@ class RL_Q():
         # else:
         #     c = 1
 
-        return self.state_space[(priority_2,rand,priority_early)]
+        '''
+        判断延误目标值和早到目标值
+        '''
+        ect_value = 0
+        ddl_value = 0
+        opt_item = self.inital_refset[0]
+        job_execute_time = opt_item[2]
 
-    def get_reward(self, cur_best_opt,impro_degree,diversity_degree):
-        reward = 0
-        if (self.best_opt - cur_best_opt) > 0:
-            reward = (self.best_opt - cur_best_opt) / self.inital_obj
-            if reward > 0.2:
-                reward = 0.2
+        for job in range(self.config.jobs_num):
+            job_makespan = job_execute_time[(self.config.stages_num - 1, job)]
+            if job_makespan < self.config.ect_windows[job]:  # 早前权重值
+                ect_value += (self.config.ect_windows[job] - job_makespan) * self.config.ect_weight[job]
+            elif job_makespan > self.config.ddl_windows[job]:  # 延误权重值
+                ddl_value += (job_makespan - self.config.ddl_windows[job]) * self.config.ddl_weight[job]
+
+        self.state_space = {}
+        ect_or_ddl = None
+        if ect_value >= ddl_value *2:
+            priority_ = -1
+            ect_or_ddl = 'ect'
+            if self.trial == 0:
+                next_state = 0
+            elif self.trial <=5:
+                next_state = 1
+            else:
+                next_state = 2
+            next_state = 0
+        elif ddl_value >= ect_value *2:
+            priority_ = 1
+            ect_or_ddl = 'ddl'
+            if self.trial == 0:
+                next_state = 3
+            elif self.trial <= 5:
+                next_state = 4
+            else:
+                next_state = 5
         else:
-            reward = -0.001
+            priority_ = 0
+            ect_or_ddl = 'equal'
+            if self.trial == 0:
+                next_state = 6
+            elif self.trial <= 5:
+                next_state = 7
+            else:
+                next_state = 8
+        self.state_space[next_state] = {self.trial, ect_or_ddl}
+
+        return next_state
+
+    def get_reward(self, cur_best_opt,impro_degree,diversity_degree,old_inital_refset):
+        # reward = 0
+        # if (self.best_opt - cur_best_opt) > 0:
+        #     reward = (self.best_opt - cur_best_opt) / self.inital_obj
+        #     if reward > 0.2:
+        #         reward = 0.2
+        # else:
+        #     reward = -0.001
 
         # fp = open('./time_cost.txt', 'a+')
         # print('{0}   {1}   {2}    {3}     {4}'.format(self.file_name,self.best_opt,cur_best_opt,self.inital_obj,self.config.ture_opt), file=fp)
@@ -377,6 +414,20 @@ class RL_Q():
             # diag = job_diagram(self.inital_refset[0][0], self.inital_refset[0][2], self.file_name, 2)
             # diag.pre()
             # print(self.file_name,self.best_opt,cur_best_opt,self.inital_obj,self.config.ture_opt)
+
+        # 改进了几个解，就更新几个
+
+
+        # 获取当下的平均目标值
+        update_num = 0
+        for i in range(int(len(self.inital_refset) / 2)):
+            if old_inital_refset[i][0] != self.inital_refset[i][0] and self.inital_refset[i][1] < \
+                    old_inital_refset[i][1]:
+                update_num += 1
+
+        reward = update_num
+
+
         return reward
 
         # 有可能是一步调已经调不limit == 50，直接接动了，如果受下一次的解，重新去调整
@@ -404,7 +455,7 @@ class RL_Q():
 
             while i < len(self.action_space[action]):
                 exceuse_search = self.action_space[action][i]
-                # schedule = copy.deepcopy(schedule)2
+                # schedule = copy.deepcopy(schedule)
                 # job_execute_time = copy.deepcopy(job_execute_time)
                 # obj = copy.deepcopy(obj)
                 print(0,schedule,obj)
@@ -589,9 +640,10 @@ class RL_Q():
         # ⭐⭐⭐
         # 返回trial，impro_mean_obj
 
-
+        old_inital_refset = copy.deepcopy(self.inital_refset)
         # 获取当下的平均目标值
         self.excuse_action(action)
+        action_name = self.action_space[action]
         impro_degree = self.upadate_num / 20
         for i_item in range(len(self.inital_refset)):
             for j_item in self.inital_refset[i_item][0]:
@@ -607,7 +659,10 @@ class RL_Q():
         cur_best_opt = self.inital_refset[0][1]    # 需要传入的参数
         # impro_mean_obj = self.ori_mean_obj - cur_mean_obj
 
-        reward = self.get_reward(cur_best_opt,impro_degree,diversity_degree)
+
+        reward = self.get_reward(cur_best_opt,impro_degree,diversity_degree,old_inital_refset)
+
+
         if cur_best_opt < self.best_opt:
             self.trial = 0
             self.best_opt = cur_best_opt
@@ -617,7 +672,13 @@ class RL_Q():
 
 
         # 状态转移函数
+        state_name = self.state_space[state]
         next_state = self.get_state(self.trial, impro_degree, diversity_degree)
+
+        next_state_name = self.state_space[next_state]
+        with open('./MDP.txt', 'a+') as fp:
+            print('s:{0},   r:{2},    a:{1},    s_:{3}'.format(state_name, action_name, reward, next_state_name), file=fp)
+
 
         new_inital_refset = copy.deepcopy(self.inital_refset)
         # new_inital_refset = []
@@ -655,14 +716,18 @@ class RL_Q():
         ori_trial = 0
         # for episode in range(MAX_EPISODES):
         step_counter = 0
-        S = 6       # 初始状态为0
+
+        S = self.get_state(self.trial, None, None)       # 初始状态为0
         CUM_REWARD = 0
 
         is_terminated = False
         # update_env(S, episode, step_counter)
         self.max_iter = 0
         a = 0
-        while self.max_iter < 3:
+        # while self.max_iter < 3:
+        with open('./MDP.txt', 'a+') as fp:
+            print('', file=fp)
+        while step_counter < self.config.jobs_num:
             print('数据集的名字：{0}'.format(self.file_name))
             A = self.choose_action(S, self.q_table)
             S_, R = self.step(S, A)
@@ -682,9 +747,11 @@ class RL_Q():
                 print(True)
                 print(q_target)
                 print(q_predict)
-            self.q_table.loc[S, A] += ALPHA * (q_target - q_predict)
+            if self.max_iter == 0:
+                self.q_table.loc[S, A] += ALPHA * (q_target - q_predict)
             S = S_
             step_counter += 1
+
         delta = np.linalg.norm(q_target - q_predict)
         # if self.inital_obj - self.config.ture_opt < 0:
         #     CUM_REWARD += 1
@@ -693,11 +760,11 @@ class RL_Q():
 
     def rl_execute(self):
         step_counter = 0
-        S = 7  # 初始状态为0
+        S = self.get_state(self.trial, None, None)  # 初始状态为0
         CUM_REWARD = 0
 
         self.max_iter = 0
-        while self.max_iter < 2:
+        while step_counter < self.config.jobs_num:
             A = self.choose_action(S, self.q_table)
             S_, R = self.step(S, A)
             CUM_REWARD += R

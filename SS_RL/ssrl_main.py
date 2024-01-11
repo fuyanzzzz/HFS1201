@@ -23,10 +23,10 @@ from SS_RL.inital_solution import HFS
 import matplotlib.pyplot as plt
 
 
-N_STATES = 12
+N_STATES = 9
 ACTIONS = ['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswap0','effeswap1','randswap0','randswap1']
 # 1. 生成初始解，这个没有问题
-actions = range(10)
+actions = range(8)
 max_iter = 3
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -106,17 +106,17 @@ while True:
             print()
             print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files) * iter + index, file_name, round(duration, 2),
                                                         rl_.config.ture_opt, rl_.best_opt), file=fp)
-            sort_time = 0
-            effe_time = 0
-            rand_time = 0
-            for item in rl_.use_actions.keys():
-                print(item, rl_.use_actions[item],round(rl_.use_actions[item][1]/max(rl_.use_actions[item][0],1),3), file=fp)
-                if item[:4] == 'sort':
-                    sort_time += rl_.use_actions[item][0]
-                elif item[:4] == 'effe':
-                    effe_time += rl_.use_actions[item][0]
-                else:
-                    rand_time += rl_.use_actions[item][0]
+            # sort_time = 0
+            # effe_time = 0
+            # rand_time = 0
+            # for item in rl_.use_actions.keys():
+            #     # print(item, rl_.use_actions[item],round(rl_.use_actions[item][1]/max(rl_.use_actions[item][0],1),3), file=fp)
+            #     if item[:4] == 'sort':
+            #         sort_time += rl_.use_actions[item][0]
+            #     elif item[:4] == 'effe':
+            #         effe_time += rl_.use_actions[item][0]
+            #     else:
+            #         rand_time += rl_.use_actions[item][0]
             # print('sort_time    ',sort_time, file=fp)
             # print('effe_time    ',effe_time, file=fp)
             # print('rand_time    ',rand_time, file=fp)
@@ -132,6 +132,7 @@ while True:
         #
         # dia = job_diagram(schedule, job_execute_time, file_name, len(txt_files)*iter +index)
         # dia.pre()
+        # plt.savefig('./img1203/pic-{}.png'.format(len(txt_files)*iter +index))
         # plt.savefig('./img1203/pic-{}.png'.format(len(txt_files)*iter +index))
 
         # 每过一幕验证一下奖励
@@ -171,17 +172,17 @@ while True:
             print()
             print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files) * iter + index, case_file_name, round(duration, 2),
                                                         rl_.config.ture_opt, rl_.best_opt), file=fp)
-            sort_time = 0
-            effe_time = 0
-            rand_time = 0
-            for item in rl_.use_actions.keys():
-                print(item, rl_.use_actions[item],round(rl_.use_actions[item][1]/max(rl_.use_actions[item][0],1),3), file=fp)
-                if item[:4] == 'sort':
-                    sort_time += rl_.use_actions[item][0]
-                elif item[:4] == 'effe':
-                    effe_time += rl_.use_actions[item][0]
-                else:
-                    rand_time += rl_.use_actions[item][0]
+            # sort_time = 0
+            # effe_time = 0
+            # rand_time = 0
+            # for item in rl_.use_actions.keys():
+            #     print(item, rl_.use_actions[item],round(rl_.use_actions[item][1]/max(rl_.use_actions[item][0],1),3), file=fp)
+            #     if item[:4] == 'sort':
+            #         sort_time += rl_.use_actions[item][0]
+            #     elif item[:4] == 'effe':
+            #         effe_time += rl_.use_actions[item][0]
+            #     else:
+            #         rand_time += rl_.use_actions[item][0]
 
         # from SS_RL.diagram import job_diagram
         # import matplotlib.pyplot as plt
@@ -200,7 +201,7 @@ while True:
         # plt.pause(0.1)  # 用于动态展示图像
 
         if (len(txt_files)*iter +index) % 20 == 0:
-            fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
+            fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, sharex=True)
 
             ax1.plot(INDEX, q_value_changes, label='子图1', color='blue')
             ax1.set_ylabel('Q值变化程度')
@@ -214,20 +215,24 @@ while True:
             ax3.set_ylabel('实验案例')
             ax3.legend()
 
+            ax4.plot(INDEX, case_CUM_obj, label='子图4', color='yellow')
+            ax4.set_ylabel('实验案例目标值')
+            ax4.legend()
+
             # 调整子图之间的垂直间距
             plt.tight_layout()
             # plt.pause(0.1)  # 用于动态展示图像
-            plt.savefig('./img0.05_1_1215/pic-{}.png'.format(int(len(txt_files)*iter +index)))
+            plt.savefig('./img0.1_0.9_0111/pic-{}.png'.format(int(len(txt_files)*iter +index)))
 
-            with open('./0.05_1_1215.txt', 'a+') as fp:
+            with open('./0.1_0.9_0111.txt', 'a+') as fp:
                 # 设置显示选项
                 pd.set_option('display.max_rows', None)
                 pd.set_option('display.max_columns', None)
 
                 # 将 DataFrame 写入文件
                 print(index, q_table, file=fp)
-                for item in rl_.use_actions.keys():
-                    print(item,rl_.use_actions[item], file=fp)
+                # for item in rl_.use_actions.keys():
+                #     print(item,rl_.use_actions[item], file=fp)
 
                 # 重置显示选项为默认值
                 pd.reset_option('display.max_rows')

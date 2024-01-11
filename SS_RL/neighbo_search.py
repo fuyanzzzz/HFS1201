@@ -48,6 +48,7 @@ class Neighbo_Search():
             loca_job_later_ = self.update_schedule[(stage, loca_machine)][loca_job_index+1]
         else:
             loca_job_later_ = loca_job
+        loca_job_later_index = self.update_schedule[(stage, loca_machine)].index(loca_job_later_)
         self.update_schedule[(stage, loca_machine)].remove(loca_job)
 
         oper_job_index = self.update_schedule[(stage, oper_machine)].index(oper_job)
@@ -77,7 +78,7 @@ class Neighbo_Search():
             # 如果因此此次的操作导致有新的工件卡住，则在第一阶段的所有机器中选择一个松弛度最高的机器插入
             self.re_cal(self.update_schedule)
             if stage == 1 and loca_job_index < len(self.update_schedule[(0, loca_machine)]):
-                loca_job_later_index = self.update_schedule[(stage, loca_machine)].index(loca_job_later_)
+
                 for job in self.update_schedule[(0, loca_machine)][loca_job_later_index:]:
                     # 如果有工件卡住，才会进入到这个if条件中，且一旦进入一次，就会跳出
                     max_slackness_job = None
@@ -120,7 +121,8 @@ class Neighbo_Search():
                                             max_slackness = slackness_i_job
                                             max_slackness_job = pre_job
                                             max_slackness_job_machine = machine
-                        self.swap_opera(0, max_slackness_job_machine, max_slackness_job, job_machine, job)
+                        if max_slackness_job:
+                            self.swap_opera(0, max_slackness_job_machine, max_slackness_job, job_machine, job)
                         break
 
 
@@ -474,7 +476,12 @@ class Neighbo_Search():
             #     selected_job = np.random.choice(self.hfs.job_list, p=probabilities)
             else:    # 使用工件的目标值*工件的松弛度【ddl-第一阶段加工时间 - 第二阶段加工时间】
                 if search_method_2 == 'DRM':
-                    values = [job_info[job][0] for job in range(self.config.jobs_num)]
+                    values = [job_info[job][0] if job_info[job][-1] == 1 else 0 for job in range(self.config.jobs_num)]
+                    values = [val if val != 0 else 1e-9 for val in values]
+                    probabilities = np.array(values) / np.sum(values)  # 归一化概率
+                    selected_job = np.random.choice(self.hfs.job_list, p=probabilities)
+                elif search_method_2 == 'ERM':
+                    values = [job_info[job][0] if job_info[job][-1] == -1 else 0 for job in range(self.config.jobs_num)]
                     values = [val if val != 0 else 1e-9 for val in values]
                     probabilities = np.array(values) / np.sum(values)  # 归一化概率
                     selected_job = np.random.choice(self.hfs.job_list, p=probabilities)
