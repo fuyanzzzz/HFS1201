@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 N_STATES = 9
 ACTIONS = ['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswap0','effeswap1','randswap0','randswap1']
 # 1. 生成初始解，这个没有问题
-actions = range(8)
+actions = range(7)
 max_iter = 3
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -226,9 +226,9 @@ while True:
             # 调整子图之间的垂直间距
             plt.tight_layout()
             # plt.pause(0.1)  # 用于动态展示图像
-            plt.savefig('./img0.1_0.9_0111/pic-{}.png'.format(int(len(txt_files)*iter +index)))
+            plt.savefig('./img0.02_0.9_0112/pic-{}.png'.format(int(len(txt_files)*iter +index)))
 
-            with open('./0.1_0.9_0111.txt', 'a+') as fp:
+            with open('./0.02_0.9_0112.txt', 'a+') as fp:
                 # 设置显示选项
                 pd.set_option('display.max_rows', None)
                 pd.set_option('display.max_columns', None)

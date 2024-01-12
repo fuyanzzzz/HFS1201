@@ -138,7 +138,7 @@ class RL_Q():
 
         # 在第二阶段随机选择工件进行insert/swap:
         self.action_space[3] = ['rand_insert_same_M_1','rand_swap_same_M_1','rand_insert_other_M_1','rand_swap_other_M_1']      # 同一个机器
-        self.action_space[4] = ['effe_insert_same_M_0','effe_swap_same_M_0','effe_insert_other_M_0','effe_swap_other_M_0']      # 同一个机器
+        # self.action_space[4] = ['effe_insert_same_M_0','effe_swap_same_M_0','effe_insert_other_M_0','effe_swap_other_M_0']      # 同一个机器
 
 
         # 第1阶段，单位可改善最多的方向的加工时间最小的工件，在同一机器/其他机器，进行insert/swap
@@ -147,7 +147,7 @@ class RL_Q():
 
         self.action_space[6] = ['dire_insert_same_eweight_1','dire_insert_other_eweight_1']
 
-        self.action_space[7] = ['effe_insert_same_DRM_1','effe_swap_same_DRM_1','effe_insert_other_DRM_1','effe_swap_other_DRM_1']      # 同一个机器
+        self.action_space[4] = ['effe_insert_same_DRM_1','effe_swap_same_DRM_1','effe_insert_other_DRM_1','effe_swap_other_DRM_1']      # 同一个机器
 
 
         self.action_space[0] = ['effe_insert_same_ERM_1','effe_swap_same_ERM_1','effe_insert_other_ERM_1','effe_swap_other_ERM_1']      # 同一个机器
