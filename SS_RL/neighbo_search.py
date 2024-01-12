@@ -832,6 +832,18 @@ class Neighbo_Search():
             self.update_obj = obj
 
 
+        # 这里调用那个函数：
+        self.sort_stage0()
+        self.re_cal(self.update_schedule)
+
+        # 更新目标值
+        self.update_obj = self.schedule_ins.cal(self.update_job_execute_time)
+
+        # 空闲插入邻域，更新工件完工时间、目标值
+        self.update_schedule, self.update_job_execute_time, self.update_obj = self.schedule_ins.idle_time_insertion(
+            self.update_schedule, self.update_job_execute_time, self.update_obj)
+
+
         # # if oper_method == 'i':
         # #     if selected_job != oper_job:
         # #         self.insert_opera(stage, loca_machine, selected_job, oper_machine, oper_job)
@@ -850,6 +862,43 @@ class Neighbo_Search():
         #     self.update_schedule, self.update_job_execute_time, self.update_obj)
 
         return self.update_schedule,self.update_obj,self.update_job_execute_time
+
+
+    def sort_stage0(self):
+        # 获取第二阶段的工件的开始时间的排序：
+        all_job_info = []
+        for machine in range(self.config.machine_num_on_stage[0]):
+            for job in self.update_schedule[(1,machine)]:
+                all_job_info.append((job,self.update_job_execute_time[(1,job)] - self.config.job_process_time[1][job]))
+        # 将工件按照在第二阶段的顺序进行升序排序
+        all_job_info = sorted(all_job_info, key=lambda x: x[-1], reverse=False)     # 这个还要判断一下是升序还是降序
+        job_sort = [item[0] for item in all_job_info]
+
+        for machine in range(self.config.machine_num_on_stage[0]):
+            self.update_schedule[(0,machine)] = []
+
+        for job in job_sort:
+            machine_end_time = np.inf
+            chosen_machine = None
+            chosen_machine_pre_job = None
+            for machine in range(self.config.machine_num_on_stage[0]):
+                if self.update_schedule[(0,machine)]:
+                    pre_job = self.update_schedule[(0,machine)][-1]
+                    if self.update_job_execute_time[(0,pre_job)] < machine_end_time:
+                        machine_end_time = self.update_job_execute_time[(0,pre_job)] - self.config.job_process_time[0][pre_job]
+                        chosen_machine = machine
+                        chosen_machine_pre_job = pre_job
+                else:
+                    chosen_machine = machine
+                    chosen_machine_pre_job = None
+                    break
+            self.update_schedule[(0,chosen_machine)].append(job)
+            if chosen_machine_pre_job is None:
+                self.update_job_execute_time[(0,job)] = self.config.job_process_time[0][job]
+            else:
+                self.update_job_execute_time[(0, job)] = self.config.job_process_time[0][job] + self.update_job_execute_time[(0, chosen_machine_pre_job)]
+
+
 
 
 
