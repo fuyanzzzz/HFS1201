@@ -132,25 +132,32 @@ class RL_Q():
         # self.action_space[3] = ['effe_insert_other_M_0','effe_swap_other_M_0']      # 同一个机器
 
         # 在第二阶段选择目标值最大的工件之一，进行insert/swap操作effe_insert_same_AF_1
-        self.action_space[1] = ['effe_insert_same_DM_1', 'effe_swap_same_DM_1','effe_insert_other_DM_1', 'effe_swap_other_DM_1']     # 同一个机器
+        self.action_space[0] = ['effe_insert_same_DM_1', 'effe_swap_same_DM_1']     # 同一个机器
+        self.action_space[1] = ['effe_insert_other_DM_1', 'effe_swap_other_DM_1']     # 同一个机器
 
-        self.action_space[2] = ['effe_insert_same_EM_1', 'effe_swap_same_EM_1','effe_insert_other_EM_1', 'effe_swap_other_EM_1']     # 同一个机器
+        self.action_space[2] = ['effe_insert_same_EM_1', 'effe_swap_same_EM_1']     # 同一个机器
+        self.action_space[3] = ['effe_insert_other_EM_1', 'effe_swap_other_EM_1']     # 同一个机器
 
         # 在第二阶段随机选择工件进行insert/swap:
-        self.action_space[3] = ['rand_insert_same_M_1','rand_swap_same_M_1','rand_insert_other_M_1','rand_swap_other_M_1']      # 同一个机器
+        self.action_space[4] = ['rand_insert_other_M_1','rand_swap_other_M_1']      # 同一个机器
+        self.action_space[5] = ['rand_insert_same_M_1','rand_swap_same_M_1',]      # 同一个机器
         # self.action_space[4] = ['effe_insert_same_M_0','effe_swap_same_M_0','effe_insert_other_M_0','effe_swap_other_M_0']      # 同一个机器
 
 
         # 第1阶段，单位可改善最多的方向的加工时间最小的工件，在同一机器/其他机器，进行insert/swap
         # self.action_space[10] = ['sort_stuck_A_S0_1']
-        self.action_space[5] = ['dire_insert_same_dweight_1','dire_insert_other_dweight_1']
+        self.action_space[6] = ['dire_insert_same_dweight_1',]
+        self.action_space[7] = ['dire_insert_other_dweight_1']
 
-        self.action_space[6] = ['dire_insert_same_eweight_1','dire_insert_other_eweight_1']
+        self.action_space[8] = ['dire_insert_same_eweight_1',]
+        self.action_space[9] = ['dire_insert_other_eweight_1']
 
-        self.action_space[4] = ['effe_insert_same_DRM_1','effe_swap_same_DRM_1','effe_insert_other_DRM_1','effe_swap_other_DRM_1']      # 同一个机器
+        self.action_space[10] = ['effe_insert_same_DRM_1','effe_swap_same_DRM_1']      # 同一个机器
+        self.action_space[11] = ['effe_insert_other_DRM_1','effe_swap_other_DRM_1']      # 同一个机器
 
 
-        self.action_space[0] = ['effe_insert_same_ERM_1','effe_swap_same_ERM_1','effe_insert_other_ERM_1','effe_swap_other_ERM_1']      # 同一个机器
+        self.action_space[12] = ['effe_insert_same_ERM_1','effe_swap_same_ERM_1']      # 同一个机器
+        self.action_space[13] = ['effe_insert_other_ERM_1','effe_swap_other_ERM_1']      # 同一个机器
 
 
 
@@ -203,7 +210,7 @@ class RL_Q():
         # else:
         #     action_name = state_table.idxmax()
 
-        if (np.random.uniform() > EPSILON) or ((state_table == 0).all()) or self.iter_index < 50:
+        if (np.random.uniform() > EPSILON) or ((state_table == 0).all()) or self.iter_index < 30:
             action_name = np.random.choice(range(len(self.action_space)))
         else:
             action_name = state_table.idxmax()
@@ -344,7 +351,7 @@ class RL_Q():
             ect_or_ddl = 'ect'
             if self.trial == 0:
                 next_state = 0
-            elif self.trial <=5:
+            elif self.trial <=3:
                 next_state = 1
             else:
                 next_state = 2
@@ -353,7 +360,7 @@ class RL_Q():
             ect_or_ddl = 'ddl'
             if self.trial == 0:
                 next_state = 3
-            elif self.trial <= 5:
+            elif self.trial <= 3:
                 next_state = 4
             else:
                 next_state = 5
@@ -362,7 +369,7 @@ class RL_Q():
             ect_or_ddl = 'equal'
             if self.trial == 0:
                 next_state = 6
-            elif self.trial <= 5:
+            elif self.trial <= 3:
                 next_state = 7
             else:
                 next_state = 8
@@ -680,7 +687,7 @@ class RL_Q():
         next_state = self.get_state(self.trial, impro_degree, diversity_degree)
 
         next_state_name = self.state_space[next_state]
-        if self.file_name == '1258_Instance_20_2_3_0,6_1_20_Rep3.txt':
+        if self.file_name == '1236_Instance_20_2_3_0,6_0,2_20_Rep1.txt':
             with open('./MDP.txt', 'a+') as fp:
                 print('s:{0},   r:{2},    a:{1},    s_:{3}'.format(state_name, action_name, reward, next_state_name), file=fp)
 
@@ -690,7 +697,7 @@ class RL_Q():
 
         # if next_state == 7:
 
-        if self.trial > 15:
+        if self.trial > 7:
             self.max_iter += 1
             self.trial = 0
             for index in range(int(len(self.inital_refset) / 2)):
@@ -732,7 +739,7 @@ class RL_Q():
         # while self.max_iter < 3:
         with open('./MDP.txt', 'a+') as fp:
             print('', file=fp)
-        while step_counter < self.config.jobs_num:
+        while step_counter < self.config.jobs_num*2:
             print('数据集的名字：{0}'.format(self.file_name))
             A = self.choose_action(S, self.q_table)
             S_, R = self.step(S, A)

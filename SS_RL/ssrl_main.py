@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 N_STATES = 9
 ACTIONS = ['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswap0','effeswap1','randswap0','randswap1']
 # 1. 生成初始解，这个没有问题
-actions = range(7)
+actions = range(14)
 max_iter = 3
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -37,7 +37,7 @@ pd.reset_option('display.max_columns')
 q_table = pd.DataFrame(
             np.zeros((N_STATES, len(actions))),columns=actions)
 
-data_folder = "data"  # 数据文件夹的路径
+data_folder = "data_1"  # 数据文件夹的路径
 # 获取data文件夹下所有的文件名
 
 # 新建一个变量，用于存储每个动作是否有改进，以及改进多少
@@ -127,18 +127,18 @@ while True:
             pd.reset_option('display.max_rows')
             pd.reset_option('display.max_columns')
 
-        # from SS_RL.diagram import job_diagram
-        # import matplotlib.pyplot as plt
-        #
-        # dia = job_diagram(schedule, job_execute_time, file_name, len(txt_files)*iter +index)
-        # dia.pre()
-        # plt.savefig('./img1203/pic-{}.png'.format(len(txt_files)*iter +index))
+        from SS_RL.diagram import job_diagram
+        import matplotlib.pyplot as plt
+
+        dia = job_diagram(schedule, job_execute_time, file_name, len(txt_files)*iter +index)
+        dia.pre()
+        plt.savefig('./img1203/pic-{}.png'.format(len(txt_files)*iter +index))
         # plt.savefig('./img1203/pic-{}.png'.format(len(txt_files)*iter +index))
 
         # 每过一幕验证一下奖励
         time_cost = 0
         start_time = time.time()
-        case_file_name = '1258_Instance_20_2_3_0,6_1_20_Rep3.txt'
+        case_file_name = '1236_Instance_20_2_3_0,6_0,2_20_Rep1.txt'
         # case_file_name = '1259_Instance_20_2_3_0,6_1_20_Rep4.txt'
         hfs = HFS(case_file_name)
 
@@ -154,7 +154,7 @@ while True:
         rl_ = RL_Q(N_STATES,ACTIONS,hfs.inital_refset,q_table,case_file_name,len(txt_files)*iter +index)
         best_opt_execute ,CUM_REWARD_case= rl_.rl_execute()
         with open('./MDP.txt', 'a+') as fp:
-            print('目标值:{0},   奖励:{1},'.format(best_opt_execute, CUM_REWARD_case), file=fp)
+            print('幕：{2},    目标值:{0},   奖励:{1},'.format(best_opt_execute, CUM_REWARD_case,len(txt_files)*iter +index), file=fp)
             print('', file=fp)
             print('', file=fp)
 
@@ -226,9 +226,9 @@ while True:
             # 调整子图之间的垂直间距
             plt.tight_layout()
             # plt.pause(0.1)  # 用于动态展示图像
-            plt.savefig('./img0.02_0.9_0112/pic-{}.png'.format(int(len(txt_files)*iter +index)))
+            plt.savefig('./img0.02_0.9_0112_1/pic-{}.png'.format(int(len(txt_files)*iter +index)))
 
-            with open('./0.02_0.9_0112.txt', 'a+') as fp:
+            with open('./0.02_0.9_0112_1.txt', 'a+') as fp:
                 # 设置显示选项
                 pd.set_option('display.max_rows', None)
                 pd.set_option('display.max_columns', None)
