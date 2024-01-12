@@ -245,6 +245,7 @@ class Neighbo_Search():
     def chosen_job2_oper(self, selected_job, stage, search_method_1,config_same_machine,oper_method):
 
         # 确定被选中的工件所在的机器
+        print('1self.update_schedule:{0}'.format(self.update_schedule))
         loca_machine = None
         oper_job_list = {}
         for machine in range(self.config.machine_num_on_stage[stage]):
@@ -283,29 +284,40 @@ class Neighbo_Search():
                 selected_job_index = self.update_schedule[(stage, loca_machine)].index(selected_job)
                 if job_flag == 1:
                     # oper_job_list[oper_machine] = self.update_schedule[(stage, loca_machine)][:selected_job_index]
-                    if selected_job_index-1 >= 0:
+                    #
+                    if selected_job_index-1 >= 0:       # 往前插入一个位置
                         oper_job_list[oper_machine] = [self.update_schedule[(stage, loca_machine)][selected_job_index-1]]
                 elif job_flag == -1:
-                    if selected_job_index+1 < len(self.update_schedule[(stage, loca_machine)]):
-                        oper_job_list[oper_machine]= [self.update_schedule[(stage, loca_machine)][selected_job_index+1]]
+                    # if selected_job_index+1 < len(self.update_schedule[(stage, loca_machine)]):
+                    if selected_job_index+2 < len(self.update_schedule[(stage, loca_machine)]):
+                        oper_job_list[oper_machine]= [self.update_schedule[(stage, loca_machine)][selected_job_index+2]]        # 其实这样不是插入到原位置嘛？？？？？？？？？？？
                 else:
-                    oper_job_list[oper_machine] = self.update_schedule[(stage, loca_machine)][:selected_job_index] + self.update_schedule[(stage, loca_machine)][selected_job_index+1:]
+                    # oper_job_list[oper_machine] = self.update_schedule[(stage, loca_machine)][:selected_job_index] + self.update_schedule[(stage, loca_machine)][selected_job_index+1:]
+                    # 如果是准时工件，尝试往前以及往后插入一个位置
+                    if selected_job_index-1 >= 0:
+                        oper_job_list[oper_machine].append(self.update_schedule[(stage, loca_machine)][selected_job_index-1])
+                    # if selected_job_index + 1 < len(self.update_schedule[(stage, loca_machine)]):
+                    #     oper_job_list[oper_machine].append(self.update_schedule[(stage, loca_machine)][selected_job_index+1])
+                    if selected_job_index + 2 < len(self.update_schedule[(stage, loca_machine)]):
+                        oper_job_list[oper_machine].append(self.update_schedule[(stage, loca_machine)][selected_job_index+2])
+
+                # 如果oper_job_list为空，就不执行！！！
 
                     # 这里如果oper_job_list为空咋办？？？
-                if len(oper_job_list[oper_machine]) == 0:
-                    if selected_job == self.update_schedule[(stage, loca_machine)][-1]:
-                        if len(self.update_schedule[(stage, loca_machine)])>1:
-                            oper_job_list[oper_machine].append(self.update_schedule[(stage, loca_machine)][-2])
-                        else:
-                            oper_job_list[oper_machine].append(self.update_schedule[(stage, loca_machine)][-1])
-                    elif selected_job == self.update_schedule[(stage, loca_machine)][0]:
-                        if len(self.update_schedule[(stage, loca_machine)])>1:
-                            oper_job_list[oper_machine].append(self.update_schedule[(stage, loca_machine)][1])
-                        else:
-                            oper_job_list[oper_machine].append(self.update_schedule[(stage, loca_machine)][0])
+                # if len(oper_job_list[oper_machine]) == 0:
+                #     if selected_job == self.update_schedule[(stage, loca_machine)][-1]:
+                #         if len(self.update_schedule[(stage, loca_machine)])>1:
+                #             oper_job_list[oper_machine].append(self.update_schedule[(stage, loca_machine)][-2])
+                #         else:
+                #             oper_job_list[oper_machine].append(self.update_schedule[(stage, loca_machine)][-1])
+                #     elif selected_job == self.update_schedule[(stage, loca_machine)][0]:
+                #         if len(self.update_schedule[(stage, loca_machine)])>1:
+                #             oper_job_list[oper_machine].append(self.update_schedule[(stage, loca_machine)][1])
+                #         else:
+                #             oper_job_list[oper_machine].append(self.update_schedule[(stage, loca_machine)][0])
 
 
-            else:
+            else:       # 如果是不同的机器上
                 oper_machine_list = list(range(self.config.machine_num_on_stage[0]))
                 for machine in oper_machine_list:
                     if machine == loca_machine:
@@ -318,11 +330,11 @@ class Neighbo_Search():
                                 continue
                             else:
                                 # oper_job_list[machine] = self.update_schedule[(stage, machine)][index+1:]
-                                if index+1< len(self.update_schedule[(stage, machine)]):
-                                    oper_job_list[machine] = [self.update_schedule[(stage, machine)][index+1]]
-                                if len(oper_job_list[machine]) == 0:
-                                    oper_job_list[machine].append(self.update_schedule[(stage, machine)][-1])
-                                break
+                                # if index< len(self.update_schedule[(stage, machine)]):
+                                oper_job_list[machine] = [self.update_schedule[(stage, machine)][index]]
+                                # if len(oper_job_list[machine]) == 0:
+                                #     oper_job_list[machine].append(self.update_schedule[(stage, machine)][-1])
+                                # break
                         elif job_flag == 1:
                             if (self.job_execute_time[(stage, job)] - self.config.job_process_time[stage][job]) < \
                                     (self.job_execute_time[(stage, selected_job)] - self.config.job_process_time[stage][selected_job]) \
@@ -334,13 +346,26 @@ class Neighbo_Search():
                                 oper_job_list[machine] = [self.update_schedule[(stage, machine)][index]]
                             else:
                                 # oper_job_list[machine] = self.update_schedule[(stage, machine)][:index]
-                                oper_job_list[machine] = [self.update_schedule[(stage, machine)][index-1]]
-                                if len(oper_job_list[machine]) == 0:
-                                    oper_job_list[machine].append(self.update_schedule[(stage, machine)][0])
-                                break
+                                oper_job_list[machine] = [self.update_schedule[(stage, machine)][index-1]]      # 这里的index-1就应该是对的
+                                # if len(oper_job_list[machine]) == 0:
+                                #     oper_job_list[machine].append(self.update_schedule[(stage, machine)][0])
+                                # break
                         else:
-                            oper_job_list[machine] = self.update_schedule[(stage, machine)]
-                            break
+                            if (self.job_execute_time[(stage, job)] - self.config.job_process_time[stage][job]) < \
+                                    (self.job_execute_time[(stage, selected_job)] - self.config.job_process_time[stage][selected_job]):
+                                continue
+                            elif (self.job_execute_time[(stage, job)] - self.config.job_process_time[stage][job]) < \
+                                    (self.job_execute_time[(stage, selected_job)] - self.config.job_process_time[stage][
+                                        selected_job]) \
+                                    and job == self.update_schedule[(stage, machine)][-1]:
+                                oper_job_list[machine].append(self.update_schedule[(stage, machine)][index])
+
+                            else:
+                                oper_job_list[machine].append(self.update_schedule[(stage, machine)][index])
+                                if index - 1 >0:
+                                    oper_job_list[machine].append(self.update_schedule[(stage, machine)][index-1])
+
+
 
 
                     # if self.job_execute_time[(stage, job)] < self.job_execute_time[(stage, selected_job)]:
@@ -497,7 +522,6 @@ class Neighbo_Search():
 
         else:
             selected_job = np.random.choice(self.hfs.job_list)
-
         if selected_job is None:
             loca_machine, oper_job_list = None,None
         else:
@@ -885,7 +909,7 @@ class Neighbo_Search():
                 if self.update_schedule[(0,machine)]:
                     pre_job = self.update_schedule[(0,machine)][-1]
                     if self.update_job_execute_time[(0,pre_job)] < machine_end_time:
-                        machine_end_time = self.update_job_execute_time[(0,pre_job)] - self.config.job_process_time[0][pre_job]
+                        machine_end_time = self.update_job_execute_time[(0,pre_job)]
                         chosen_machine = machine
                         chosen_machine_pre_job = pre_job
                 else:
