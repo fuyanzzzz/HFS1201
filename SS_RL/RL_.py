@@ -207,7 +207,7 @@ class RL_Q():
             action_name = np.random.choice(range(len(self.action_space)))
         else:
             action_name = state_table.idxmax()
-        action_name = np.random.choice(range(len(self.action_space)))
+        # action_name = np.random.choice(range(len(self.action_space)))
         return action_name
 
 
@@ -348,7 +348,6 @@ class RL_Q():
                 next_state = 1
             else:
                 next_state = 2
-            next_state = 0
         elif ddl_value >= ect_value *2:
             priority_ = 1
             ect_or_ddl = 'ddl'
@@ -494,13 +493,18 @@ class RL_Q():
                 neig_search = neighbo_search.Neighbo_Search(schedule, job_execute_time, obj, self.file_name)
                 if search_method_1 != 'sort':
                     break_info = False
+
                     loca_machine, selected_job, oper_job_list = neig_search.chosen_job(search_method_1, search_method_2,
                                                                                        config_same_machine, stage,
                                                                                        oper_method)
+                    if selected_job is None:
+                        i+=1
+                        continue
                     update_obj = obj
                     for key in oper_job_list.keys():
                         oper_machine = key
                         for job in oper_job_list[key]:
+
                             oper_job = job
                             neig_search = neighbo_search.Neighbo_Search(schedule, job_execute_time, obj, self.file_name)
                             update_schedule, update_obj, update_job_execute_time = neig_search.search_opea(oper_method,obj,stage, loca_machine, selected_job, oper_machine, oper_job,search_method_1)
