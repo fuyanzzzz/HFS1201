@@ -153,6 +153,10 @@ while True:
 
         rl_ = RL_Q(N_STATES,ACTIONS,hfs.inital_refset,q_table,case_file_name,len(txt_files)*iter +index)
         best_opt_execute ,CUM_REWARD_case= rl_.rl_execute()
+        with open('./MDP.txt', 'a+') as fp:
+            print('目标值:{0},   奖励:{1},'.format(best_opt_execute, CUM_REWARD_case), file=fp)
+            print('', file=fp)
+            print('', file=fp)
 
         case_CUM_obj.append(best_opt_execute)
         case_CUM_REWARD.append(CUM_REWARD_case)

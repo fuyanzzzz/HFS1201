@@ -680,8 +680,9 @@ class RL_Q():
         next_state = self.get_state(self.trial, impro_degree, diversity_degree)
 
         next_state_name = self.state_space[next_state]
-        with open('./MDP.txt', 'a+') as fp:
-            print('s:{0},   r:{2},    a:{1},    s_:{3}'.format(state_name, action_name, reward, next_state_name), file=fp)
+        if self.file_name == '1258_Instance_20_2_3_0,6_1_20_Rep3.txt':
+            with open('./MDP.txt', 'a+') as fp:
+                print('s:{0},   r:{2},    a:{1},    s_:{3}'.format(state_name, action_name, reward, next_state_name), file=fp)
 
 
         new_inital_refset = copy.deepcopy(self.inital_refset)
