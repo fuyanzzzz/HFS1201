@@ -78,3 +78,12 @@ class DataInfo():
             self.ture_opt = int(np.loadtxt("HFSDDW_Small_Best_Sequence.txt", skiprows=skiprows_i, max_rows=1, usecols=(7),dtype=int))
         else:
             self.true_opt = None
+
+        split_list = self.filename.split('_')
+        if len(split_list[5])==3:
+            self.T = float(split_list[5][-1])/10
+            self.R = float(split_list[6][-1])/10
+        else:
+            self.T = float(split_list[5])
+            self.R = float(split_list[6])
+        self.W = float(split_list[7])

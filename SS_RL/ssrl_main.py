@@ -17,7 +17,7 @@ from SS_RL.diagram import job_diagram
 
 path = r'C:\paper_code_0501\HFS1201\useful0424\data'
 from config import DataInfo
-from SS_RL.RL_ import RL_Q
+from SS_RL.RL_dqn import rl_main
 from SS_RL.inital_solution import HFS
 # from SS_RL.schedule_cal import ScheduleCal
 import matplotlib.pyplot as plt
@@ -54,6 +54,7 @@ INDEX = []
 
 txt_files = [f for f in os.listdir(data_folder) if f.endswith(".txt")]
 iter = 0
+rl_ = rl_main()
 while True:
     if iter >= max_iter:
         break
@@ -69,8 +70,8 @@ while True:
 
         hfs.initial_solu()
 
-        rl_ = RL_Q(N_STATES,ACTIONS,hfs.inital_refset,q_table,file_name,len(txt_files)*iter +index)
-        hfs.inital_refset,q_table,delta, REWARD = rl_.rl()
+        hfs.inital_refset,delta, REWARD = rl_.rl_excuse(hfs.inital_refset, file_name, len(txt_files)*iter +index)
+
         print(hfs.inital_refset[0][1])
         opt_item = hfs.inital_refset[0]
         schedule = opt_item[0]
@@ -90,7 +91,7 @@ while True:
         fp = open('./time_cost.txt', 'a+')
         if index == 0:
             print('索引   文件名   耗时  数据最优解   实验最优解 ', file=fp)
-        print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files)*iter +index,file_name,round(duration,2),rl_.config.ture_opt,rl_.best_opt), file=fp)
+        print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files)*iter +index,file_name,round(duration,2),rl_.env.config.ture_opt,rl_.env.best_opt), file=fp)
         fp.close()
 
         with open('./time_cost.txt', 'a+') as fp:
@@ -105,7 +106,7 @@ while True:
                 print('索引   文件名   耗时  数据最优解   实验最优解 ', file=fp)
             print()
             print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files) * iter + index, file_name, round(duration, 2),
-                                                        rl_.config.ture_opt, rl_.best_opt), file=fp)
+                                                        rl_.env.config.ture_opt, rl_.env.best_opt), file=fp)
             # sort_time = 0
             # effe_time = 0
             # rand_time = 0
@@ -151,8 +152,7 @@ while True:
         # plt.savefig('./img1203/pic-{}.png'.format(index))
         # plt.show()
 
-        rl_ = RL_Q(N_STATES,ACTIONS,hfs.inital_refset,q_table,case_file_name,len(txt_files)*iter +index)
-        best_opt_execute ,CUM_REWARD_case= rl_.rl_execute()
+        best_opt_execute ,CUM_REWARD_case = rl_.rl_excuse_case(hfs.inital_refset, case_file_name, len(txt_files)*iter +index)
         with open('./MDP.txt', 'a+') as fp:
             print('幕：{2},    目标值:{0},   奖励:{1},'.format(best_opt_execute, CUM_REWARD_case,len(txt_files)*iter +index), file=fp)
             print('', file=fp)
@@ -175,7 +175,7 @@ while True:
                 print('索引   文件名   耗时  数据最优解   实验最优解 ', file=fp)
             print()
             print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files) * iter + index, case_file_name, round(duration, 2),
-                                                        rl_.config.ture_opt, rl_.best_opt), file=fp)
+                                                        rl_.env.config.ture_opt, rl_.env.best_opt), file=fp)
             # sort_time = 0
             # effe_time = 0
             # rand_time = 0
@@ -226,9 +226,9 @@ while True:
             # 调整子图之间的垂直间距
             plt.tight_layout()
             # plt.pause(0.1)  # 用于动态展示图像
-            plt.savefig('./img0.02_0.9_0112_1/pic-{}.png'.format(int(len(txt_files)*iter +index)))
+            plt.savefig('./img0.02_0.9_0115_1/pic-{}.png'.format(int(len(txt_files)*iter +index)))
 
-            with open('./0.02_0.9_0112_1.txt', 'a+') as fp:
+            with open('./0.02_0.9_0115_1.txt', 'a+') as fp:
                 # 设置显示选项
                 pd.set_option('display.max_rows', None)
                 pd.set_option('display.max_columns', None)
