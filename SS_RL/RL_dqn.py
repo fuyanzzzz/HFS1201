@@ -239,11 +239,20 @@ class Envior():
 
         # next_state[0] = self.config.T
         # next_state[1] = self.config.R
-        next_state[0] = math.sqrt(delay_error_2/self.config.jobs_num)
-        next_state[1] = math.sqrt(early_error_2/self.config.jobs_num)
-        next_state[2] = ddl_value / ect_value if ect_value!=0 else ddl_value
+        next_state[0] = math.sqrt(delay_error_2/self.config.jobs_num)/100
+        next_state[1] = math.sqrt(early_error_2/self.config.jobs_num)/100
+        next_state[2] = min(ddl_value / ect_value if ect_value!=0 else ddl_value,100)/100
         next_state[3] = self.trial
         next_state[4] = step_counter
+
+
+        # with open('./state.txt', 'a+') as fp:
+        #     print('{0}'.format(next_state[0]), file=fp)
+        #     print('{0}'.format(next_state[1]), file=fp)
+        #     print('{0}'.format(next_state[2]), file=fp)
+        #     print('{0}'.format(next_state[3]), file=fp)
+        #     print('{0}'.format(next_state[4]), file=fp)
+        #     print('', file=fp)
 
         reward = self.get_reward(old_inital_refset)
 
@@ -556,7 +565,7 @@ class rl_main():
         self.network = Dueling_DQN(n_state, n_action)
         self.target_network.load_state_dict(self.network.state_dict())
         # self.optimizer = torch.optim.Adam(self.network.parameters(), lr=0.0001)
-        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=0.01)
+        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=0.0001)
         self.memory = Memory(self.REPLAY_MEMORY)
 
 
@@ -564,12 +573,10 @@ class rl_main():
     def init_paras(self):
         self.GAMMA = 0.99
         # self.BATH = 256  # 批量训练256
-        self.BATH = 64  # 批量训练256
+        self.BATH = 256  # 批量训练256
         self.EXPLORE = 2000000
-        # self.REPLAY_MEMORY = 50000  # 经验池容量5W
-        self.REPLAY_MEMORY = 5000  # 经验池容量5W
-        # self.BEGIN_LEARN_SIZE = 1024
-        self.BEGIN_LEARN_SIZE = 512
+        self.REPLAY_MEMORY = 50000  # 经验池容量5W
+        self.BEGIN_LEARN_SIZE = 1024
         # self.UPDATA_TAGESTEP = 200  # 目标网络的更新频次
         self.UPDATA_TAGESTEP = 10  # 目标网络的更新频次
         self.learn_step = 0
