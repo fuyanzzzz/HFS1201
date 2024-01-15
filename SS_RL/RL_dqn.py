@@ -199,9 +199,9 @@ class Envior():
       reward = update_num
 
       return reward
-    def get_state(self,old_inital_refset):
+    def get_state(self,old_inital_refset,step_counter):
         self.reward = 0
-        next_state = torch.zeros(7)
+        next_state = torch.zeros(8)
         ect_value = 0
         ddl_value = 0
         opt_item = self.inital_refset[0]
@@ -222,6 +222,7 @@ class Envior():
         next_state[4] = self.config.W
         next_state[5] = ddl_value / ect_value if ect_value!=0 else ddl_value
         next_state[6] = self.trial
+        next_state[7] = step_counter
 
         reward = self.get_reward(old_inital_refset)
 
@@ -431,7 +432,7 @@ class Envior():
 
 
 
-    def step(self,state, action):
+    def step(self,state, action,step_counter):
 
         # 执行动作，得到优化后的值，
         # 根据动作，执行：这里就是调用搜索的主函数去调用去搞
@@ -469,7 +470,7 @@ class Envior():
 
 
         # 状态转移函数
-        next_state,reward = self.get_state(old_inital_refset)
+        next_state,reward = self.get_state(old_inital_refset,step_counter)
 
         # if self.file_name == '1236_Instance_20_2_3_0,6_0,2_20_Rep1.txt':
         #     with open('./MDP.txt', 'a+') as fp:
@@ -477,6 +478,12 @@ class Envior():
 
 
         new_inital_refset = copy.deepcopy(self.inital_refset)
+
+
+        if self.file_name == '1236_Instance_20_2_3_0,6_0,2_20_Rep1.txt':
+            with open('./MDP.txt', 'a+') as fp:
+                print('s:{0},   r:{2},    a:{1}'.format(state, action_name, reward), file=fp)
+
         # new_inital_refset = []
 
         # if next_state == 7:
@@ -515,7 +522,7 @@ class Envior():
 # writer = SummaryWriter('logs/dueling_DQN2')
 
 n_action = 14
-n_state = 7
+n_state = 8
 class rl_main():
     def __init__(self):
         self.n_action = n_action
@@ -527,19 +534,23 @@ class rl_main():
         self.target_network = Dueling_DQN(n_state, n_action)
         self.network = Dueling_DQN(n_state, n_action)
         self.target_network.load_state_dict(self.network.state_dict())
-        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=0.0001)
+        # self.optimizer = torch.optim.Adam(self.network.parameters(), lr=0.0001)
+        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=0.01)
         self.memory = Memory(self.REPLAY_MEMORY)
 
 
 
     def init_paras(self):
         self.GAMMA = 0.99
-        self.BATH = 256  # 批量训练256
+        # self.BATH = 256  # 批量训练256
+        self.BATH = 128  # 批量训练256
         self.EXPLORE = 2000000
-        self.REPLAY_MEMORY = 50000  # 经验池容量5W
-        self.BEGIN_LEARN_SIZE = 1024
+        # self.REPLAY_MEMORY = 50000  # 经验池容量5W
+        self.REPLAY_MEMORY = 5000  # 经验池容量5W
+        # self.BEGIN_LEARN_SIZE = 1024
+        self.BEGIN_LEARN_SIZE = 512
         # self.UPDATA_TAGESTEP = 200  # 目标网络的更新频次
-        self.UPDATA_TAGESTEP = 100  # 目标网络的更新频次
+        self.UPDATA_TAGESTEP = 10  # 目标网络的更新频次
         self.learn_step = 0
         # writer = SummaryWriter('logs/dueling_DQN2')
         self.FINAL_EPSILON = 0.00001
@@ -550,11 +561,12 @@ class rl_main():
     def rl_excuse(self,inital_refset, file_name, iter):
         # 初始化环境
         self.env = Envior(inital_refset, file_name, iter)
+        step_counter = 0
         # 初始化状态
-        state,_ = self.env.get_state(inital_refset)
+        state,_ = self.env.get_state(inital_refset,step_counter)
         # 初始化当前幕的数据
         episode_reward = 0
-        step_counter = 0
+
         # 设置终止状态
         while step_counter < self.env.config.jobs_num * 2:
 
@@ -570,7 +582,7 @@ class rl_main():
 
 
             # 根据（状态，动作）得到step序列
-            next_state, reward = self.env.step(state,action)
+            next_state, reward = self.env.step(state,action,step_counter)
             done = False
             if step_counter + 1 == self.env.config.jobs_num * 2:
                 done = True
@@ -631,7 +643,8 @@ class rl_main():
         # 初始化环境
         self.env = Envior(inital_refset, file_name, iter)
         # 初始化状态
-        state,_ = self.env.get_state(inital_refset)
+        step_counter = 0
+        state,_ = self.env.get_state(inital_refset,step_counter)
         # 初始化当前幕的数据
         episode_reward = 0
         # 设置终止状态
@@ -648,7 +661,7 @@ class rl_main():
                 action = self.network.select_action(state_tensor)
 
             # 根据（状态，动作）得到step序列
-            next_state, reward = self.env.step(state, action)
+            next_state, reward = self.env.step(state, action,step_counter)
             done = False
             if step_counter + 1 == self.env.config.jobs_num * 2:
                 done = True

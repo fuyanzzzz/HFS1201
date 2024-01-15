@@ -107,24 +107,6 @@ while True:
             print()
             print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files) * iter + index, file_name, round(duration, 2),
                                                         rl_.env.config.ture_opt, rl_.env.best_opt), file=fp)
-            # sort_time = 0
-            # effe_time = 0
-            # rand_time = 0
-            # for item in rl_.use_actions.keys():
-            #     # print(item, rl_.use_actions[item],round(rl_.use_actions[item][1]/max(rl_.use_actions[item][0],1),3), file=fp)
-            #     if item[:4] == 'sort':
-            #         sort_time += rl_.use_actions[item][0]
-            #     elif item[:4] == 'effe':
-            #         effe_time += rl_.use_actions[item][0]
-            #     else:
-            #         rand_time += rl_.use_actions[item][0]
-            # print('sort_time    ',sort_time, file=fp)
-            # print('effe_time    ',effe_time, file=fp)
-            # print('rand_time    ',rand_time, file=fp)
-            # print('total_time    ',rand_time+sort_time+effe_time, file=fp)
-            # print('effe_time占比    ',round(effe_time/(rand_time+sort_time+effe_time),2), file=fp)
-            # print('effe_time + rand_time 占比    ',round((effe_time+rand_time)/(rand_time+sort_time+effe_time),2), file=fp)
-            # 重置显示选项为默认值
             pd.reset_option('display.max_rows')
             pd.reset_option('display.max_columns')
 
@@ -154,6 +136,7 @@ while True:
 
         best_opt_execute ,CUM_REWARD_case = rl_.rl_excuse_case(hfs.inital_refset, case_file_name, len(txt_files)*iter +index)
         with open('./MDP.txt', 'a+') as fp:
+
             print('幕：{2},    目标值:{0},   奖励:{1},'.format(best_opt_execute, CUM_REWARD_case,len(txt_files)*iter +index), file=fp)
             print('', file=fp)
             print('', file=fp)
