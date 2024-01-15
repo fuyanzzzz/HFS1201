@@ -190,18 +190,20 @@ class Envior():
         self.action_space[13] = ['effe_insert_other_ERM_1','effe_swap_other_ERM_1']      # 同一个机器
 
     def get_reward(self,old_inital_refset):
-      update_num = 0
-      for i in range(int(len(self.inital_refset) / 2)):
-          if old_inital_refset[i][0] != self.inital_refset[i][0] and self.inital_refset[i][1] < \
-                  old_inital_refset[i][1]:
-              update_num += 1
+      # update_num = 0
+      # for i in range(int(len(self.inital_refset) / 2)):
+      #     if old_inital_refset[i][0] != self.inital_refset[i][0] and self.inital_refset[i][1] < \
+      #             old_inital_refset[i][1]:
+      #         update_num += 1
+      #
+      # reward = update_num
 
-      reward = update_num
+      reward = old_inital_refset[0][1] - self.inital_refset[0][1]
 
       return reward
     def get_state(self,old_inital_refset,step_counter):
         self.reward = 0
-        next_state = torch.zeros(8)
+        next_state = torch.zeros(5)
         ect_value = 0
         ddl_value = 0
         opt_item = self.inital_refset[0]
@@ -215,14 +217,20 @@ class Envior():
                 ddl_value += (job_makespan - self.config.ddl_windows[job]) * self.config.ddl_weight[job]
 
         # 状态：【工件数、机器数、TRW、早到和延误的倍数、self.trial】
-        next_state[0] = self.config.jobs_num
-        next_state[1] = self.config.machine_num_on_stage[0]
-        next_state[2] = self.config.T
-        next_state[3] = self.config.R
-        next_state[4] = self.config.W
-        next_state[5] = ddl_value / ect_value if ect_value!=0 else ddl_value
-        next_state[6] = self.trial
-        next_state[7] = step_counter
+        # next_state[0] = self.config.jobs_num
+        # next_state[1] = self.config.machine_num_on_stage[0]
+        # next_state[2] = self.config.T
+        # next_state[3] = self.config.R
+        # next_state[4] = self.config.W
+        # next_state[5] = ddl_value / ect_value if ect_value!=0 else ddl_value
+        # next_state[6] = self.trial
+        # next_state[7] = step_counter
+
+        next_state[0] = self.config.T
+        next_state[1] = self.config.R
+        next_state[2] = ddl_value / ect_value if ect_value!=0 else ddl_value
+        next_state[3] = self.trial
+        next_state[4] = step_counter
 
         reward = self.get_reward(old_inital_refset)
 
@@ -522,7 +530,7 @@ class Envior():
 # writer = SummaryWriter('logs/dueling_DQN2')
 
 n_action = 14
-n_state = 8
+n_state = 5
 class rl_main():
     def __init__(self):
         self.n_action = n_action
@@ -543,7 +551,7 @@ class rl_main():
     def init_paras(self):
         self.GAMMA = 0.99
         # self.BATH = 256  # 批量训练256
-        self.BATH = 128  # 批量训练256
+        self.BATH = 64  # 批量训练256
         self.EXPLORE = 2000000
         # self.REPLAY_MEMORY = 50000  # 经验池容量5W
         self.REPLAY_MEMORY = 5000  # 经验池容量5W
@@ -558,7 +566,7 @@ class rl_main():
         self.min_epsilon = 0.1
 
 
-    def rl_excuse(self,inital_refset, file_name, iter):
+    def rl_excuse(self,inital_refset, file_name, iter,inital_obj):
         # 初始化环境
         self.env = Envior(inital_refset, file_name, iter)
         step_counter = 0
@@ -566,6 +574,7 @@ class rl_main():
         state,_ = self.env.get_state(inital_refset,step_counter)
         # 初始化当前幕的数据
         episode_reward = 0
+        episode_step = []
 
         # 设置终止状态
         while step_counter < self.env.config.jobs_num * 2:
@@ -587,10 +596,11 @@ class rl_main():
             if step_counter + 1 == self.env.config.jobs_num * 2:
                 done = True
             # print(next_state,reward,done)
-            episode_reward += reward
+
 
             # 将得到序列添加到经验池
-            self.memory.add((state, next_state, action, reward, done))
+            episode_step.append([state, next_state, action, reward, done])
+
 
             # 只有当经验池中的样本数量大于批量训练的数量，才会执行训练
             if self.memory.size() > self.BEGIN_LEARN_SIZE:
@@ -636,6 +646,10 @@ class rl_main():
 
             state = next_state
             step_counter += 1
+        gap_opt = inital_obj - self.env.inital_refset[0][1]
+        for item in episode_step:
+            episode_reward += item[3]/gap_opt
+            self.memory.add((item[0],item[1],item[2],item[3]/gap_opt,item[4]))
 
         return copy.deepcopy(self.env.inital_refset),loss_item, episode_reward
 
@@ -649,7 +663,7 @@ class rl_main():
         episode_reward = 0
         # 设置终止状态
         step_counter = 0
-        while step_counter < self.env.config.jobs_num * 2:
+        while step_counter < self.env.config.jobs_num:
 
             p = random.random()
             # 动作选择
@@ -663,7 +677,7 @@ class rl_main():
             # 根据（状态，动作）得到step序列
             next_state, reward = self.env.step(state, action,step_counter)
             done = False
-            if step_counter + 1 == self.env.config.jobs_num * 2:
+            if step_counter + 1 == self.env.config.jobs_num:
                 done = True
             # print(next_state,reward,done)
             episode_reward += reward

@@ -69,8 +69,9 @@ while True:
         hfs = HFS(file_name)
 
         hfs.initial_solu()
+        inital_obj = hfs.inital_refset[0][1]
 
-        hfs.inital_refset,delta, REWARD = rl_.rl_excuse(hfs.inital_refset, file_name, len(txt_files)*iter +index)
+        hfs.inital_refset,delta, REWARD = rl_.rl_excuse(hfs.inital_refset, file_name, len(txt_files)*iter +index,inital_obj)
 
         print(hfs.inital_refset[0][1])
         opt_item = hfs.inital_refset[0]
@@ -209,15 +210,15 @@ while True:
             # 调整子图之间的垂直间距
             plt.tight_layout()
             # plt.pause(0.1)  # 用于动态展示图像
-            plt.savefig('./img0.02_0.9_0115_1/pic-{}.png'.format(int(len(txt_files)*iter +index)))
+            plt.savefig('./img0.02_0.9_0115_2/pic-{}.png'.format(int(len(txt_files)*iter +index)))
 
-            with open('./0.02_0.9_0115_1.txt', 'a+') as fp:
+            with open('./0.02_0.9_0115_2.txt', 'a+') as fp:
                 # 设置显示选项
                 pd.set_option('display.max_rows', None)
                 pd.set_option('display.max_columns', None)
 
                 # 将 DataFrame 写入文件
-                print(index, q_table, file=fp)
+                print(index, len(txt_files)*iter +index,q_value_changes, file=fp)
                 # for item in rl_.use_actions.keys():
                 #     print(item,rl_.use_actions[item], file=fp)
 
