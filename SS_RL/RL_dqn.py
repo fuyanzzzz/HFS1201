@@ -226,8 +226,21 @@ class Envior():
         # next_state[6] = self.trial
         # next_state[7] = step_counter
 
-        next_state[0] = self.config.T
-        next_state[1] = self.config.R
+        # 遍历所有的工件，用工件的完工时间，减去早到或者延误的时间点
+        early_error_2 = 0
+        delay_error_2 = 0
+        for job in range(self.config.jobs_num):
+            if job_execute_time[(1,job)] > self.config.ddl_windows[job]:
+                delay_error_2 += (job_execute_time[(1,job)] - self.config.ddl_windows[job])**2
+            elif job_execute_time[(1,job)] < self.config.ect_windows[job]:
+                early_error_2 += (self.config.ect_windows[job] - job_execute_time[(1,job)])**2
+
+
+
+        # next_state[0] = self.config.T
+        # next_state[1] = self.config.R
+        next_state[0] = math.sqrt(delay_error_2/self.config.jobs_num)
+        next_state[1] = math.sqrt(early_error_2/self.config.jobs_num)
         next_state[2] = ddl_value / ect_value if ect_value!=0 else ddl_value
         next_state[3] = self.trial
         next_state[4] = step_counter
