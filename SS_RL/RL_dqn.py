@@ -156,6 +156,8 @@ class Envior():
         for i_action in self.action_space_1:
             self.use_actions[i_action] =[0, 0, 0]
 
+        self.iprovement_time = 0
+
 
     def gen_action_space(self):
         self.action_space = {}
@@ -203,7 +205,7 @@ class Envior():
       return reward
     def get_state(self,old_inital_refset,step_counter):
         self.reward = 0
-        next_state = torch.zeros(5)
+        next_state = torch.zeros(6)
         ect_value = 0
         ddl_value = 0
         opt_item = self.inital_refset[0]
@@ -239,11 +241,28 @@ class Envior():
 
         # next_state[0] = self.config.T
         # next_state[1] = self.config.R
-        next_state[0] = math.sqrt(delay_error_2/self.config.jobs_num)/100
-        next_state[1] = math.sqrt(early_error_2/self.config.jobs_num)/100
-        next_state[2] = min(ddl_value / ect_value if ect_value!=0 else ddl_value,100)/100
-        next_state[3] = self.trial
-        next_state[4] = step_counter
+        early_a = math.sqrt(early_error_2/self.config.jobs_num)
+        delay_b = math.sqrt(delay_error_2/self.config.jobs_num)
+        # next_state[0] = min(delay_b/100,1)
+        # next_state[1] = min(early_a/100,1)
+        # next_state[2] = min(delay_b / early_a if early_a!=0 else delay_b,100)/100
+        # next_state[3] = min(ddl_value / ect_value if ect_value!=0 else ddl_value,100)/100
+        # next_state[4] = self.trial/7
+        # next_state[5] = step_counter/40
+
+        next_state[0] = delay_b
+        next_state[1] = early_a
+        next_state[2] = delay_b / early_a if early_a!=0 else delay_b
+        next_state[3] = ddl_value / ect_value if ect_value!=0 else ddl_value
+        next_state[4] = self.trial
+        next_state[5] = step_counter
+
+
+        # next_state[0] = min(delay_b/100,1)
+        # next_state[1] = min(early_a/100,1)
+        # next_state[0] = min(ddl_value / ect_value if ect_value!=0 else ddl_value,100)/100
+        # next_state[1] = self.trial/7
+        # next_state[2] = step_counter/40
 
 
         # with open('./state.txt', 'a+') as fp:
@@ -255,6 +274,13 @@ class Envior():
         #     print('', file=fp)
 
         reward = self.get_reward(old_inital_refset)
+        result = torch.any(torch.isnan(next_state))
+        # with open('./state.txt', 'a+') as fp:
+        #
+        #     print(result, file=fp)
+        #     print(next_state, file=fp)
+        #     print('',file=fp)
+
 
         return next_state,reward
 
@@ -494,6 +520,7 @@ class Envior():
         if cur_best_opt < self.best_opt:
             self.trial = 0
             self.best_opt = cur_best_opt
+            self.iprovement_time += 1
 
         else:
             self.trial += 1
@@ -510,9 +537,9 @@ class Envior():
         new_inital_refset = copy.deepcopy(self.inital_refset)
 
 
-        if self.file_name == '1236_Instance_20_2_3_0,6_0,2_20_Rep1.txt':
-            with open('./MDP.txt', 'a+') as fp:
-                print('s:{0},   r:{2},    a:{1}'.format(state, action_name, reward), file=fp)
+        # if self.file_name == '1236_Instance_20_2_3_0,6_0,2_20_Rep1.txt':
+        with open('./MDP.txt', 'a+') as fp:
+            print('s:{0},   r:{2},    a:{1}'.format(state, action_name, reward), file=fp)
 
         # new_inital_refset = []
 
@@ -552,7 +579,7 @@ class Envior():
 # writer = SummaryWriter('logs/dueling_DQN2')
 
 n_action = 14
-n_state = 5
+n_state = 6
 class rl_main():
     def __init__(self):
         self.n_action = n_action
@@ -565,25 +592,23 @@ class rl_main():
         self.network = Dueling_DQN(n_state, n_action)
         self.target_network.load_state_dict(self.network.state_dict())
         # self.optimizer = torch.optim.Adam(self.network.parameters(), lr=0.0001)
-        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=0.0001)
+        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=0.01)
         self.memory = Memory(self.REPLAY_MEMORY)
 
 
 
     def init_paras(self):
         self.GAMMA = 0.99
-        # self.BATH = 256  # 批量训练256
         self.BATH = 256  # 批量训练256
         self.EXPLORE = 2000000
         self.REPLAY_MEMORY = 50000  # 经验池容量5W
         self.BEGIN_LEARN_SIZE = 1024
         # self.UPDATA_TAGESTEP = 200  # 目标网络的更新频次
-        self.UPDATA_TAGESTEP = 10  # 目标网络的更新频次
+        self.UPDATA_TAGESTEP = 20  # 目标网络的更新频次
         self.learn_step = 0
         # writer = SummaryWriter('logs/dueling_DQN2')
-        self.FINAL_EPSILON = 0.00001
         self.epsilon = 1
-        self.min_epsilon = 0.1
+        self.min_epsilon = 0.5
 
 
     def rl_excuse(self,inital_refset, file_name, iter,inital_obj):
@@ -597,12 +622,13 @@ class rl_main():
         episode_step = []
 
         # 设置终止状态
+        self.epsilon = max(self.epsilon - 0.01, self.min_epsilon)
         while step_counter < self.env.config.jobs_num * 2:
 
             p = random.random()
             # 动作选择
-            self.epsilon = max(self.epsilon - iter * 0.01, self.min_epsilon)
-            if p < self.epsilon:
+            # self.epsilon = max(self.epsilon - iter * 0.05, self.min_epsilon)
+            if p < self.epsilon or iter < 108:
                 action = random.randint(0, n_action - 1)
             else:
                 state_tensor = torch.as_tensor(state, dtype=torch.float).unsqueeze(0)
@@ -619,11 +645,13 @@ class rl_main():
 
 
             # 将得到序列添加到经验池
+            # self.memory.add((state, next_state, action, reward, done))
             episode_step.append([state, next_state, action, reward, done])
 
 
             # 只有当经验池中的样本数量大于批量训练的数量，才会执行训练
-            if self.memory.size() > self.BEGIN_LEARN_SIZE:
+            # if self.memory.size() > self.BEGIN_LEARN_SIZE:
+            if iter >= 108:
                 self.learn_step += 1
 
                 # 每隔一段时间，更新目标网络
@@ -654,6 +682,7 @@ class rl_main():
                 loss = F.mse_loss(self.network(batch_state).gather(1, batch_action), y)
                 self.optimizer.zero_grad()
                 loss.backward()
+                # torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=20, norm_type=2)
                 self.optimizer.step()
                 # writer.add_scalar('loss', loss.item(), global_step=learn_step)
 
@@ -667,9 +696,16 @@ class rl_main():
             state = next_state
             step_counter += 1
         gap_opt = inital_obj - self.env.inital_refset[0][1]
-        for item in episode_step:
+
+
+        for i_index, item in enumerate(episode_step):
+            if gap_opt == 0:
+                gap_opt = 1
+            # if item[3]/gap_opt >0 :
+            #     episode_reward += 1/self.env.config.jobs_num
             episode_reward += item[3]/gap_opt
             self.memory.add((item[0],item[1],item[2],item[3]/gap_opt,item[4]))
+
 
         return copy.deepcopy(self.env.inital_refset),loss_item, episode_reward
 
@@ -685,14 +721,14 @@ class rl_main():
         step_counter = 0
         while step_counter < self.env.config.jobs_num:
 
-            p = random.random()
-            # 动作选择
-            self.epsilon = max(self.epsilon - iter * 0.01, self.min_epsilon)
-            if p < self.epsilon:
-                action = random.randint(0, n_action - 1)
-            else:
-                state_tensor = torch.as_tensor(state, dtype=torch.float).unsqueeze(0)
-                action = self.network.select_action(state_tensor)
+            # p = random.random()
+            # # 动作选择
+            # # self.epsilon = max(self.epsilon - iter * 0.01, self.min_epsilon)
+            # if p < self.epsilon:
+            #     action = random.randint(0, n_action - 1)
+            # else:
+            state_tensor = torch.as_tensor(state, dtype=torch.float).unsqueeze(0)
+            action = self.network.select_action(state_tensor)
 
             # 根据（状态，动作）得到step序列
             next_state, reward = self.env.step(state, action,step_counter)

@@ -37,7 +37,7 @@ pd.reset_option('display.max_columns')
 q_table = pd.DataFrame(
             np.zeros((N_STATES, len(actions))),columns=actions)
 
-data_folder = "data_1"  # 数据文件夹的路径
+data_folder = "data"  # 数据文件夹的路径
 # 获取data文件夹下所有的文件名
 
 # 新建一个变量，用于存储每个动作是否有改进，以及改进多少
@@ -50,15 +50,21 @@ CUM_REWARD = []
 case_CUM_REWARD = []
 case_CUM_obj = []
 INDEX = []
+Epslion = []
 
 
 txt_files = [f for f in os.listdir(data_folder) if f.endswith(".txt")]
 iter = 0
 rl_ = rl_main()
 while True:
-    if iter >= max_iter:
-        break
+    if iter == 4:
+        iter = 0
+    # if iter >= max_iter:
+    #     break
     for index, file_name in enumerate(txt_files):
+        split_list = file_name.split('_')
+        if (int(split_list[0])-iter) % 5  != 0:
+            continue
         time_cost = 0
         start_time = time.time()
         # file_name = '1258_Instance_20_2_3_0,6_1_20_Rep3.txt'
@@ -70,8 +76,10 @@ while True:
 
         hfs.initial_solu()
         inital_obj = hfs.inital_refset[0][1]
+        if inital_obj == 0:
+            continue
 
-        hfs.inital_refset,delta, REWARD = rl_.rl_excuse(hfs.inital_refset, file_name, len(txt_files)*iter +index,inital_obj)
+        hfs.inital_refset,delta, REWARD = rl_.rl_excuse(hfs.inital_refset, file_name, len(CUM_REWARD),inital_obj)
 
         print(hfs.inital_refset[0][1])
         opt_item = hfs.inital_refset[0]
@@ -87,13 +95,20 @@ while True:
         q_value_changes.append(delta)
         CUM_REWARD.append(REWARD)
 
-        INDEX.append(len(txt_files)*iter +index)
+        INDEX.append(len(CUM_REWARD))
 
         fp = open('./time_cost.txt', 'a+')
         if index == 0:
             print('索引   文件名   耗时  数据最优解   实验最优解 ', file=fp)
         print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files)*iter +index,file_name,round(duration,2),rl_.env.config.ture_opt,rl_.env.best_opt), file=fp)
         fp.close()
+
+        with open('./MDP.txt', 'a+') as fp:
+
+            print('幕：{2},    目标值:{0},   奖励:{1},'.format(obj, CUM_REWARD,len(txt_files)*iter +index), file=fp)
+            print(file_name, file=fp)
+            print('', file=fp)
+            print('', file=fp)
 
         with open('./time_cost.txt', 'a+') as fp:
             # 设置显示选项
@@ -114,9 +129,9 @@ while True:
         from SS_RL.diagram import job_diagram
         import matplotlib.pyplot as plt
 
-        dia = job_diagram(schedule, job_execute_time, file_name, len(txt_files)*iter +index)
-        dia.pre()
-        plt.savefig('./img1203/pic-{}.png'.format(len(txt_files)*iter +index))
+        # dia = job_diagram(schedule, job_execute_time, file_name, len(txt_files)*iter +index)
+        # dia.pre()
+        # plt.savefig('./img1203/pic-{}.png'.format(len(txt_files)*iter +index))
         # plt.savefig('./img1203/pic-{}.png'.format(len(txt_files)*iter +index))
 
         # 每过一幕验证一下奖励
@@ -135,10 +150,11 @@ while True:
         # plt.savefig('./img1203/pic-{}.png'.format(index))
         # plt.show()
 
-        best_opt_execute ,CUM_REWARD_case = rl_.rl_excuse_case(hfs.inital_refset, case_file_name, len(txt_files)*iter +index)
+        best_opt_execute ,CUM_REWARD_case = rl_.rl_excuse_case(hfs.inital_refset, case_file_name, len(case_CUM_REWARD))
         with open('./MDP.txt', 'a+') as fp:
 
-            print('幕：{2},    目标值:{0},   奖励:{1},'.format(best_opt_execute, CUM_REWARD_case,len(txt_files)*iter +index), file=fp)
+            print('幕：{2},    目标值:{0},   奖励:{1},'.format(best_opt_execute, CUM_REWARD_case,len(case_CUM_REWARD)), file=fp)
+            print(case_file_name, file=fp)
             print('', file=fp)
             print('', file=fp)
 
@@ -187,9 +203,9 @@ while True:
         # plt.ylabel('Q值变化')
         # plt.title('Q值变化随训练轮次的变化')
         # plt.pause(0.1)  # 用于动态展示图像
-
-        if (len(txt_files)*iter +index) % 20 == 0:
-            fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, sharex=True)
+        Epslion.append(rl_.epsilon)
+        if (len(CUM_REWARD)) % 20 == 0:
+            fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, sharex=True)
 
             ax1.plot(INDEX, q_value_changes, label='子图1', color='blue')
             ax1.set_ylabel('Q值变化程度')
@@ -207,10 +223,14 @@ while True:
             ax4.set_ylabel('实验案例目标值')
             ax4.legend()
 
+            ax5.plot(INDEX, Epslion, label='子图5', color='green')
+            ax5.set_ylabel('epsilon')
+            ax5.legend()
+
             # 调整子图之间的垂直间距
             plt.tight_layout()
             # plt.pause(0.1)  # 用于动态展示图像
-            plt.savefig('./img0.02_0.9_0115_2/pic-{}.png'.format(int(len(txt_files)*iter +index)))
+            plt.savefig('./img0.02_0.9_0116_1/pic-{}.png'.format(int(len(CUM_REWARD))))
 
             with open('./0.02_0.9_0115_2.txt', 'a+') as fp:
                 # 设置显示选项
