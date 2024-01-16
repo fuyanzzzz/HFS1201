@@ -17,7 +17,7 @@ from SS_RL.diagram import job_diagram
 
 path = r'C:\paper_code_0501\HFS1201\useful0424\data'
 from config import DataInfo
-from SS_RL.RL_dqn import rl_main
+from SS_RL.rl_ppo import rl_main
 from SS_RL.inital_solution import HFS
 # from SS_RL.schedule_cal import ScheduleCal
 import matplotlib.pyplot as plt
@@ -79,7 +79,7 @@ while True:
         if inital_obj == 0:
             continue
 
-        hfs.inital_refset,delta, REWARD = rl_.rl_excuse(hfs.inital_refset, file_name, len(CUM_REWARD),inital_obj)
+        hfs.inital_refset,REWARD ,actor_loss,critic_loss= rl_.rl_excuse(hfs.inital_refset, file_name, len(CUM_REWARD),inital_obj)
 
         print(hfs.inital_refset[0][1])
         opt_item = hfs.inital_refset[0]
@@ -92,7 +92,9 @@ while True:
         # 计算函数运行时长
         duration = end_time - start_time
 
-        q_value_changes.append(delta)
+        q_value_changes.append(actor_loss)
+        Epslion.append(critic_loss)
+
         CUM_REWARD.append(REWARD)
 
         INDEX.append(len(CUM_REWARD))
@@ -149,8 +151,9 @@ while True:
         # dia.pre()
         # plt.savefig('./img1203/pic-{}.png'.format(index))
         # plt.show()
+        inital_obj = hfs.inital_refset[0][1]
 
-        best_opt_execute ,CUM_REWARD_case = rl_.rl_excuse_case(hfs.inital_refset, case_file_name, len(case_CUM_REWARD))
+        best_opt_execute ,CUM_REWARD_case = rl_.rl_excuse_case(hfs.inital_refset, case_file_name, len(case_CUM_REWARD),inital_obj)
         with open('./MDP.txt', 'a+') as fp:
 
             print('幕：{2},    目标值:{0},   奖励:{1},'.format(best_opt_execute, CUM_REWARD_case,len(case_CUM_REWARD)), file=fp)
@@ -203,7 +206,7 @@ while True:
         # plt.ylabel('Q值变化')
         # plt.title('Q值变化随训练轮次的变化')
         # plt.pause(0.1)  # 用于动态展示图像
-        Epslion.append(rl_.epsilon)
+
         if (len(CUM_REWARD)) % 20 == 0:
             fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, sharex=True)
 
