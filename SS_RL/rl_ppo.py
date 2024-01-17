@@ -124,11 +124,11 @@ class PPO:
     # 训练
     def learn(self, transition_dict):
         # 提取数据集
-        states = torch.tensor([item for item in transition_dict['next_states']],dtype=torch.float).to(self.device)
+        states = torch.tensor([item.numpy() for item in transition_dict['states']],dtype=torch.float).to(self.device)
         actions = torch.tensor(transition_dict['actions']).to(self.device).view(-1, 1)
-        rewards = torch.tensor(transition_dict['rewards']).to(self.device).view(-1, 1)
-        next_states = torch.tensor([item for item in transition_dict['next_states']], dtype=torch.float).to(self.device)
-        dones = torch.tensor(transition_dict['dones']).to(self.device).view(-1, 1)
+        rewards = torch.tensor(transition_dict['rewards'],dtype=torch.float).to(self.device).view(-1, 1)
+        next_states = torch.tensor([item.numpy() for item in transition_dict['next_states']], dtype=torch.float).to(self.device)
+        dones = torch.tensor(transition_dict['dones'], dtype=torch.float).to(self.device).view(-1, 1)
 
 
         # 目标，下一个状态的state_value  [b,1]

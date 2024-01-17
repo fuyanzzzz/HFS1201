@@ -211,7 +211,7 @@ while True:
             fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, sharex=True)
 
             ax1.plot(INDEX, q_value_changes, label='子图1', color='blue')
-            ax1.set_ylabel('Q值变化程度')
+            ax1.set_ylabel('actor_loss')
             ax1.legend()
 
             ax2.plot(INDEX, CUM_REWARD, label='子图2', color='red')
@@ -222,12 +222,12 @@ while True:
             ax3.set_ylabel('实验案例')
             ax3.legend()
 
-            ax4.plot(INDEX, case_CUM_obj, label='子图4', color='yellow')
+            ax4.plot(INDEX, case_CUM_obj, label='子图4', color='red')
             ax4.set_ylabel('实验案例目标值')
             ax4.legend()
 
-            ax5.plot(INDEX, Epslion, label='子图5', color='green')
-            ax5.set_ylabel('epsilon')
+            ax5.plot(INDEX, Epslion, label='子图5', color='blue')
+            ax5.set_ylabel('critic_loss')
             ax5.legend()
 
             # 调整子图之间的垂直间距
