@@ -657,9 +657,10 @@ return_list = []  # 保存每个回合的return
 n_actions = 14
 n_states = 6
 class rl_main():
-    def __init__(self):
+    def __init__(self,i_text):
         self.n_action = n_actions
         self.gen_nn()
+        self.i_text = i_text
 
 
     def gen_nn(self):
@@ -727,7 +728,7 @@ class rl_main():
             gap_opt = inital_obj - self.env.inital_refset[0][1]
 
             state = next_state
-            episode_reward += 1
+            # episode_reward += 1
             step_counter += 1
 
         gap_opt = inital_obj - self.env.inital_refset[0][1]
@@ -736,11 +737,16 @@ class rl_main():
                 gap_opt = 1
             if item[3]/gap_opt >0 :
                 episode_reward += 1/self.env.config.jobs_num
-            episode_reward += item[3] / gap_opt
+            # else:
+            #     episode_reward += -0.01
+            episode_reward += min(item[3] / gap_opt,self.i_text)
             transition_dict['states'].append(item[0])
             transition_dict['actions'].append(item[2])
             transition_dict['next_states'].append(item[1])
-            transition_dict['rewards'].append(item[3] / gap_opt + 1/self.env.config.jobs_num)
+            # if item[3]/gap_opt >0 :
+            transition_dict['rewards'].append(min(item[3] / gap_opt,self.i_text)+ 1/self.env.config.jobs_num)
+            # else:
+            #     transition_dict['rewards'].append(-0.01)
             transition_dict['dones'].append(item[4])
 
 
@@ -775,9 +781,9 @@ class rl_main():
             if step_counter + 1 == self.env.config.jobs_num * 2:
                 done = True
 
-
+            episode_step.append([state, next_state, action, reward, done])
             state = next_state
-            episode_reward += 1
+            # episode_reward += 1
             step_counter += 1
 
         gap_opt = inital_obj - self.env.inital_refset[0][1]
@@ -786,7 +792,7 @@ class rl_main():
                 gap_opt = 1
             if item[3] / gap_opt > 0:
                 episode_reward += 1 / self.env.config.jobs_num
-            episode_reward += item[3] / gap_opt
+            episode_reward += min(item[3] / gap_opt,self.i_text)
 
 
         return min([self.env.inital_refset[i][1] for i in range(len(self.env.inital_refset))]), episode_reward
