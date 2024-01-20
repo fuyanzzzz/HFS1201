@@ -46,6 +46,7 @@ Create Time: 2023/2/10 15:45
 '''
 
 # 代码用于离散环境的模型
+import os
 import numpy as np
 import torch
 from torch import nn
@@ -185,6 +186,17 @@ class PPO:
             self.critic_optimizer.step()
 
         return actor_loss.item(),critic_loss.item()
+
+    def save_model(self, iter):
+        # pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+        # pathlib.Path(f"{path}\output").mkdir(parents=True, exist_ok=True)
+        save_path = './savemodel/'
+        filepath = os.path.join(save_path, "PPO_model" + "_" + str(iter) + ".pth")
+
+        torch.save(self.actor.state_dict(), filepath)
+
+    def load_model(self, iter):
+        self.actor.load_state_dict(torch.load("./savemodel/PPO_model" + "_" + str(iter) + ".pth"))
 
 
 
@@ -754,6 +766,7 @@ class rl_main():
         return_list.append(episode_reward)
         # 模型训练
         actor_loss,critic_loss = self.agent.learn(transition_dict)
+        self.agent.save_model(iter)
 
         return copy.deepcopy(self.env.inital_refset),episode_reward,actor_loss,critic_loss
 
@@ -769,7 +782,7 @@ class rl_main():
         episode_reward = 0
 
         episode_step = []
-
+        # self.agent.load_model(iter)
         while step_counter < self.env.config.jobs_num * 2:
 
             # 动作选择
