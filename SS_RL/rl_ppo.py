@@ -187,16 +187,18 @@ class PPO:
 
         return actor_loss.item(),critic_loss.item()
 
-    def save_model(self, iter):
+    def save_model(self, iter,i_yangben):
         # pathlib.Path(path).mkdir(parents=True, exist_ok=True)
         # pathlib.Path(f"{path}\output").mkdir(parents=True, exist_ok=True)
-        save_path = './savemodel/'
+        save_path = './0124savemodel_{0}/'.format(i_yangben)
         filepath = os.path.join(save_path, "PPO_model" + "_" + str(iter) + ".pth")
 
         torch.save(self.actor.state_dict(), filepath)
 
-    def load_model(self, iter):
-        self.actor.load_state_dict(torch.load("./savemodel/PPO_model" + "_" + str(iter) + ".pth"))
+    def load_model(self, iter,i_yangben):
+        self.actor.load_state_dict(torch.load("./0124savemodel_{0}/PPO_model".format(i_yangben) + "_" + str(iter) + ".pth"))
+        print(1)
+
 
 
 
@@ -270,6 +272,33 @@ class Envior():
 
         self.action_space[12] = ['effe_insert_same_ERM_1','effe_swap_same_ERM_1']      # 同一个机器
         self.action_space[13] = ['effe_insert_other_ERM_1','effe_swap_other_ERM_1']      # 同一个机器
+        #
+        # self.action_space[0] = ['effe_insert_same_DM_1', 'effe_insert_other_DM_1']     # 同一个机器
+        # self.action_space[1] = ['effe_swap_same_DM_1', 'effe_swap_other_DM_1']     # 同一个机器
+        #
+        # self.action_space[2] = ['effe_insert_same_EM_1', 'effe_insert_other_EM_1']     # 同一个机器
+        # self.action_space[3] = ['effe_swap_same_EM_1', 'effe_swap_other_EM_1']     # 同一个机器
+        #
+        # # 在第二阶段随机选择工件进行insert/swap:
+        # self.action_space[4] = ['rand_insert_other_M_1','rand_insert_same_M_1']      # 同一个机器
+        # self.action_space[5] = ['rand_swap_other_M_1','rand_swap_same_M_1',]      # 同一个机器
+        # # self.action_space[4] = ['effe_insert_same_M_0','effe_swap_same_M_0','effe_insert_other_M_0','effe_swap_other_M_0']      # 同一个机器
+        #
+        #
+        # # 第1阶段，单位可改善最多的方向的加工时间最小的工件，在同一机器/其他机器，进行insert/swap
+        # # self.action_space[10] = ['sort_stuck_A_S0_1']
+        # self.action_space[6] = ['dire_insert_same_dweight_1','dire_insert_other_dweight_1']
+        # # self.action_space[7] = []
+        #
+        # self.action_space[8] = ['dire_insert_same_eweight_1','dire_insert_other_eweight_1']
+        # # self.action_space[9] = []
+        #
+        # self.action_space[10] = ['effe_insert_same_DRM_1','effe_insert_other_DRM_1']      # 同一个机器
+        # self.action_space[11] = ['effe_swap_same_DRM_1','effe_swap_other_DRM_1']      # 同一个机器
+        #
+        #
+        # self.action_space[7] = ['effe_insert_same_ERM_1','effe_insert_other_ERM_1']      # 同一个机器
+        # self.action_space[9] = ['effe_swap_same_ERM_1','effe_swap_other_ERM_1']      # 同一个机器
 
     def get_reward(self,old_inital_refset):
       # update_num = 0
@@ -285,28 +314,27 @@ class Envior():
       return reward
     def get_state(self,old_inital_refset,step_counter):
         self.reward = 0
-        next_state = torch.zeros(6)
+        next_state = torch.zeros(7)
         ect_value = 0
         ddl_value = 0
         opt_item = self.inital_refset[0]
         job_execute_time = opt_item[2]
+        schedule = opt_item[0]
+        num_early = 0
+        num_delay = 0
+        early_list = []
+        delay_list = []
 
         for job in range(self.config.jobs_num):
             job_makespan = job_execute_time[(self.config.stages_num - 1, job)]
             if job_makespan < self.config.ect_windows[job]:  # 早前权重值
                 ect_value += (self.config.ect_windows[job] - job_makespan) * self.config.ect_weight[job]
+                num_early += 1
+                early_list.append(ect_value)
             elif job_makespan > self.config.ddl_windows[job]:  # 延误权重值
                 ddl_value += (job_makespan - self.config.ddl_windows[job]) * self.config.ddl_weight[job]
-
-        # 状态：【工件数、机器数、TRW、早到和延误的倍数、self.trial】
-        # next_state[0] = self.config.jobs_num
-        # next_state[1] = self.config.machine_num_on_stage[0]
-        # next_state[2] = self.config.T
-        # next_state[3] = self.config.R
-        # next_state[4] = self.config.W
-        # next_state[5] = ddl_value / ect_value if ect_value!=0 else ddl_value
-        # next_state[6] = self.trial
-        # next_state[7] = step_counter
+                num_delay += 1
+                delay_list.append(ddl_value)
 
         # 遍历所有的工件，用工件的完工时间，减去早到或者延误的时间点
         early_error_2 = 0
@@ -318,9 +346,6 @@ class Envior():
                 early_error_2 += (self.config.ect_windows[job] - job_execute_time[(1,job)])**2
 
 
-
-        # next_state[0] = self.config.T
-        # next_state[1] = self.config.R
         early_a = math.sqrt(early_error_2/self.config.jobs_num)
         delay_b = math.sqrt(delay_error_2/self.config.jobs_num)
         # next_state[0] = min(delay_b/100,1)
@@ -330,28 +355,66 @@ class Envior():
         # next_state[4] = self.trial/7
         # next_state[5] = step_counter/40
 
+        # early_error_2 = 0
+        # delay_error_2 = 0
+        # # 早到窗口的平均值
+        # ave_early = sum(self.config.ect_windows)/self.config.jobs_num
+        # ave_delay = sum(self.config.ddl_windows)/self.config.jobs_num
+        #
+        # for job in range(self.config.jobs_num):
+        #     early_error_2 += (self.config.ect_windows[job] - ave_early)**2
+        #     delay_error_2 += (self.config.ddl_windows[job] - ave_delay)**2
+        #
+        # data_early_a = math.sqrt(early_error_2/self.config.jobs_num)
+        # data_delay_b = math.sqrt(delay_error_2/self.config.jobs_num)
+
         next_state[0] = delay_b
         next_state[1] = early_a
+        # next_state[1] = data_delay_b / data_early_a if data_early_a!=0 else data_delay_b
         next_state[2] = delay_b / early_a if early_a!=0 else delay_b
         next_state[3] = ddl_value / ect_value if ect_value!=0 else ddl_value
         next_state[4] = self.trial
         next_state[5] = step_counter
+        next_state[6] = (self.inital_refset[10][1] - self.inital_refset[0][1]) / self.inital_refset[0][1] if self.inital_refset[0][1] != 0 else 0
+        # next_state[6] = num_early / self.config.jobs_num
+        # next_state[7] = num_delay / self.config.jobs_num
+
+        # # 遍历所有的工件，用工件的完工时间，减去早到或者延误的时间点
+        # early_error_2 = 0
+        # delay_error_2 = 0
+        # # 早到窗口的平均值
+        # ave_early = sum(self.config.ect_windows)/self.config.jobs_num
+        # ave_delay = sum(self.config.ddl_windows)/self.config.jobs_num
+        #
+        # for job in range(self.config.jobs_num):
+        #     early_error_2 += (self.config.ect_windows[job] - ave_early)**2
+        #     delay_error_2 += (self.config.ddl_windows[job] - ave_delay)**2
+        #
+        # early_a = math.sqrt(early_error_2/self.config.jobs_num)
+        # delay_b = math.sqrt(delay_error_2/self.config.jobs_num)
+        #
+        # during_time_list = []
+        # for i_machine in range(self.config.machine_num_on_stage[0]):
+        #     first_job = schedule[(1, i_machine)][0]
+        #     last_job = schedule[(1, i_machine)][-1]
+        #     during_time = job_execute_time[(1, last_job)] - job_execute_time[(1, first_job)] - \
+        #                   self.config.job_process_time[1][first_job]
+        #     during_time_list.append(during_time)
+
+        # next_state[0] = delay_b
+        # next_state[1] = early_a
+        # next_state[2] = num_early / self.config.jobs_num
+        # next_state[3] = num_delay / self.config.jobs_num
+        # next_state[4] = max(delay_list)/ddl_value if delay_list else 0  # 还得防错
+        # next_state[5] = max(early_list)/ect_value if early_list else 0
+        # # 获取机器上的最大加工时间以及最小加工时间
+        # next_state[6] = min(during_time_list) / max(during_time_list)
+        # next_state[7] = self.trial
+        # next_state[8] = step_counter
 
 
-        # next_state[0] = min(delay_b/100,1)
-        # next_state[1] = min(early_a/100,1)
-        # next_state[0] = min(ddl_value / ect_value if ect_value!=0 else ddl_value,100)/100
-        # next_state[1] = self.trial/7
-        # next_state[2] = step_counter/40
 
 
-        # with open('./state.txt', 'a+') as fp:
-        #     print('{0}'.format(next_state[0]), file=fp)
-        #     print('{0}'.format(next_state[1]), file=fp)
-        #     print('{0}'.format(next_state[2]), file=fp)
-        #     print('{0}'.format(next_state[3]), file=fp)
-        #     print('{0}'.format(next_state[4]), file=fp)
-        #     print('', file=fp)
 
         reward = self.get_reward(old_inital_refset)
         result = torch.any(torch.isnan(next_state))
@@ -618,8 +681,8 @@ class Envior():
 
 
         # if self.file_name == '1236_Instance_20_2_3_0,6_0,2_20_Rep1.txt':
-        with open('./MDP.txt', 'a+') as fp:
-            print('s:{0},   r:{2},    a:{1}'.format(state, action_name, reward), file=fp)
+        # with open('./MDP.txt', 'a+') as fp:
+        #     print('s:{0},   r:{2},    a:{1}'.format(state, action_name, reward), file=fp)
 
         # new_inital_refset = []
 
@@ -667,7 +730,7 @@ return_list = []  # 保存每个回合的return
 # writer = SummaryWriter('logs/dueling_DQN2')
 
 n_actions = 14
-n_states = 6
+n_states = 7
 class rl_main():
     def __init__(self,i_text):
         self.n_action = n_actions
@@ -704,7 +767,7 @@ class rl_main():
         # self.min_epsilon = 0.5
 
 
-    def rl_excuse(self,inital_refset, file_name, iter,inital_obj):
+    def rl_excuse(self,inital_refset, file_name, iter,inital_obj,i_yangben):
         # 初始化环境
         self.env = Envior(inital_refset, file_name, iter)
         step_counter = 0
@@ -723,7 +786,7 @@ class rl_main():
 
         episode_step = []
 
-        while step_counter < self.env.config.jobs_num * 2:
+        while step_counter < int(self.env.config.jobs_num * 1.5):
 
             # 动作选择
             action = self.agent.take_action(state)
@@ -732,7 +795,7 @@ class rl_main():
             # 根据（状态，动作）得到step序列
             next_state, reward = self.env.step(state, action, step_counter)
             done = False
-            if step_counter + 1 == self.env.config.jobs_num * 2:
+            if step_counter + 1 == int(self.env.config.jobs_num * 1.5):
                 done = True
             # print(next_state,reward,done)
             episode_step.append([state, next_state, action, reward, done])
@@ -749,16 +812,15 @@ class rl_main():
                 gap_opt = 1
             if item[3]/gap_opt >0 :
                 episode_reward += 1/self.env.config.jobs_num
-            # else:
-            #     episode_reward += -0.01
             episode_reward += min(item[3] / gap_opt,self.i_text)
             transition_dict['states'].append(item[0])
             transition_dict['actions'].append(item[2])
             transition_dict['next_states'].append(item[1])
-            # if item[3]/gap_opt >0 :
-            transition_dict['rewards'].append(min(item[3] / gap_opt,self.i_text)+ 1/self.env.config.jobs_num)
-            # else:
-            #     transition_dict['rewards'].append(-0.01)
+            if item[3]/gap_opt >0 :
+                transition_dict['rewards'].append(min(item[3] / gap_opt,self.i_text) + 1/self.env.config.jobs_num)
+            else:
+                transition_dict['rewards'].append(0)
+
             transition_dict['dones'].append(item[4])
 
 
@@ -766,7 +828,7 @@ class rl_main():
         return_list.append(episode_reward)
         # 模型训练
         actor_loss,critic_loss = self.agent.learn(transition_dict)
-        self.agent.save_model(iter)
+        self.agent.save_model(iter,i_yangben)
 
         return copy.deepcopy(self.env.inital_refset),episode_reward,actor_loss,critic_loss
 
@@ -783,7 +845,7 @@ class rl_main():
 
         episode_step = []
         # self.agent.load_model(iter)
-        while step_counter < self.env.config.jobs_num * 2:
+        while step_counter < int(self.env.config.jobs_num * 1.5):
 
             # 动作选择
             action = self.agent.take_action(state)
@@ -791,7 +853,7 @@ class rl_main():
             # 根据（状态，动作）得到step序列
             next_state, reward = self.env.step(state, action, step_counter)
             done = False
-            if step_counter + 1 == self.env.config.jobs_num * 2:
+            if step_counter + 1 == int(self.env.config.jobs_num * 1.5):
                 done = True
 
             episode_step.append([state, next_state, action, reward, done])

@@ -54,14 +54,23 @@ Epslion = []
 
 
 txt_files = [f for f in os.listdir(data_folder) if f.endswith(".txt")]
+# file_path = 'data_filename.txt'
+# with open(file_path,'r',encoding = 'utf-8') as file:
+#     lines = file.readlines()
+# txt_files = [line.replace('\n','') for line in lines]
 
 # min_a = [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]
 min_a = [0.8]
 train = True
 text = False
 
+yangben = [4]
+
 if train is True:
-    for i_text in min_a:
+
+    # for i_text in min_a:
+    for i_yangben in yangben:
+        i_text = min_a[0]
         q_value_changes = []
         CUM_REWARD = []
         case_CUM_REWARD = []
@@ -71,19 +80,21 @@ if train is True:
 
         cur_iter = 0
         try:
-            iter = 0
+            iter = 1
             cur_iter = 0
             rl_ = rl_main(i_text)
             while True:
                 if iter == 5:
                     iter = 0
                     cur_iter += 1
-                # if len(q_value_changes) >= 1000:
-                #     break
+                if len(q_value_changes) >= 445:
+                    break
 
                 for index, file_name in enumerate(txt_files):
                     split_list = file_name.split('_')
                     if (int(split_list[0])-iter) % 5  != 0:
+                        continue
+                    if (int(split_list[0])-i_yangben) % 5  == 0:
                         continue
                     time_cost = 0
                     start_time = time.time()
@@ -105,7 +116,7 @@ if train is True:
 
                     cur_iter += 1
 
-                    hfs.inital_refset,REWARD ,actor_loss,critic_loss= rl_.rl_excuse(hfs.inital_refset, file_name, len(CUM_REWARD),inital_obj)
+                    hfs.inital_refset,REWARD ,actor_loss,critic_loss= rl_.rl_excuse(hfs.inital_refset, file_name, len(CUM_REWARD),inital_obj,i_yangben)
 
                     print(hfs.inital_refset[0][1])
                     opt_item = hfs.inital_refset[0]
@@ -143,12 +154,12 @@ if train is True:
                     print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files)*iter +index,file_name,round(duration,2),rl_.env.config.ture_opt,rl_.env.best_opt), file=fp)
                     fp.close()
 
-                    with open('./MDP.txt', 'a+') as fp:
-
-                        print('幕：{2},    目标值:{0},   奖励:{1},'.format(obj, REWARD,len(txt_files)*iter +index), file=fp)
-                        print(file_name, file=fp)
-                        print('', file=fp)
-                        print('', file=fp)
+                    # with open('./MDP.txt', 'a+') as fp:
+                    #
+                    #     print('幕：{2},    目标值:{0},   奖励:{1},'.format(obj, REWARD,len(txt_files)*iter +index), file=fp)
+                    #     print(file_name, file=fp)
+                    #     print('', file=fp)
+                    #     print('', file=fp)
 
                     with open('./time_cost.txt', 'a+') as fp:
                         # 设置显示选项
@@ -177,6 +188,8 @@ if train is True:
                     # 每过一幕验证一下奖励
                     time_cost = 0
                     start_time = time.time()
+                    # case_file_name = '1215_Instance_20_2_3_0,4_0,6_20_Rep0.txt'
+                    # case_file_name = '1083_Instance_20_2_2_0,2_0,2_10_Rep3.txt'
                     case_file_name = '1236_Instance_20_2_3_0,6_0,2_20_Rep1.txt'
                     # case_file_name = '1259_Instance_20_2_3_0,6_1_20_Rep4.txt'
                     hfs = HFS(case_file_name)
@@ -249,30 +262,34 @@ if train is True:
                     if (len(CUM_REWARD)) % 20 == 0:
                         fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, sharex=True)
 
-                        ax1.plot(INDEX, q_value_changes, label='子图1', color='blue')
+                        # ax1.plot(INDEX, q_value_changes, label='子图1', color='blue')
+                        ax1.plot(INDEX, q_value_changes,label='',color='blue')
                         ax1.set_ylabel('actor_loss')
                         ax1.legend()
 
-                        ax2.plot(INDEX, CUM_REWARD, label='子图2', color='red')
-                        ax2.set_ylabel('累计奖励')
+                        ax2.plot(INDEX, Epslion,label='',color='blue')
+                        ax2.set_ylabel('critic_loss')
                         ax2.legend()
 
-                        ax3.plot(INDEX, case_CUM_REWARD, label='子图3', color='green')
-                        ax3.set_ylabel('实验案例')
+                        ax3.plot(INDEX, CUM_REWARD,label='', color='red')
+                        ax3.set_ylabel('累计奖励')
                         ax3.legend()
 
-                        ax4.plot(INDEX, case_CUM_obj, label='子图4', color='red')
-                        ax4.set_ylabel('实验案例目标值')
+                        ax4.plot(INDEX, case_CUM_REWARD,label='',color='green')
+                        ax4.set_ylabel('实验案例奖励')
                         ax4.legend()
 
-                        ax5.plot(INDEX, Epslion, label='子图5', color='blue')
-                        ax5.set_ylabel('critic_loss')
+                        ax5.plot(INDEX, case_CUM_obj,label='', color='red')
+                        ax5.set_ylabel('实验案例目标值')
                         ax5.legend()
+
+
+
 
                         # 调整子图之间的垂直间距
                         plt.tight_layout()
                         # plt.pause(0.1)  # 用于动态展示图像
-                        plt.savefig('./img0.02_0.9_0120_{}_1/pic-{}.png'.format(i_text,int(len(CUM_REWARD))))
+                        plt.savefig('./img0.02_0.9_0124_{}_{}/pic_{}.png'.format(i_text,i_yangben,int(len(CUM_REWARD))))
 
                         # with open('./0.02_0.9_0115_2.txt', 'a+') as fp:
                         #     # 设置显示选项
@@ -297,32 +314,78 @@ if train is True:
             continue
 
     # 初始化策略
-    # 重载参数·
+    # 重载参数
+
+
 
 if text is True:
     # 以下参数需要确认
-    iter = None
-    i_text = 0.8
+    for i_yangben in yangben:
+        try:
+            iter = 432
+            i_text = 0.8
 
-    rl_ = rl_main(i_text)
-    rl_.agent.load_model(iter)
-    for index, file_name in enumerate(txt_files):
+            rl_ = rl_main(i_text)
+            rl_.agent.load_model(iter,i_yangben)
 
-        # 初始化
-        hfs = HFS(file_name)
-        hfs.initial_solu()
-        inital_obj = hfs.inital_refset[0][1]
-        best_opt_list = []
-        for _ in range(10):
-            best_opt_execute, CUM_REWARD_case = rl_.rl_excuse_case(hfs.inital_refset, file_name, len(case_CUM_REWARD),
-                                                                   inital_obj)
-            best_opt_list.append(best_opt_execute)
+            for index, file_name in enumerate(txt_files):
+
+                split_list = file_name.split('_')
+                if (int(split_list[0]) - i_yangben) % 5 != 0:
+                    continue
+                # if int(split_list[0]) % 5 != 0:
+                #     continue
+                time_cost = 0
+                start_time = time.time()
+                # 初始化
+                hfs = HFS(file_name)
+                hfs.initial_solu()
+                inital_obj = hfs.inital_refset[0][1]
+                best_opt_list = []
+
+                for i in range(10):
+                    best_opt_execute, CUM_REWARD_case = rl_.rl_excuse_case(hfs.inital_refset, file_name, len(case_CUM_REWARD),
+                                                                           inital_obj)
+                    best_opt_list.append(best_opt_execute)
+                    with open('./MDP.txt', 'a+') as fp:
+                        print(best_opt_execute, file=fp)
+                        print(file_name, file=fp)
+                        if i == 9:
+                            print('目标值列表：',best_opt_list, file=fp)
+                        print('', file=fp)
+                        print('', file=fp)
 
 
-        with open('./text_result.txt', 'a+') as fp:
-            print(file_name,rl_.env.config.ture_opt,round(sum(best_opt_list)/len(best_opt_list),2), file=fp)
+
+                # best_opt_execute, CUM_REWARD_case = rl_.rl_excuse_case(hfs.inital_refset, file_name, len(case_CUM_REWARD),
+                #                                                        inital_obj)
+                # best_opt_list.append(best_opt_execute)
+                with open('./MDP.txt', 'a+') as fp:
+                    print(best_opt_execute, file=fp)
+                    print(file_name, file=fp)
+                    print('', file=fp)
+                    print('', file=fp)
 
 
+                # from SS_RL.diagram import job_diagram
+                # import matplotlib.pyplot as plt
+                #
+                # schedule = rl_.env.inital_refset[0][0]
+                # job_execute_time = rl_.env.inital_refset[0][2]
+                # split_list = file_name.split('_')
+                # dia = job_diagram(schedule, job_execute_time, file_name, split_list[0])
+                # dia.pre()
+                # plt.savefig('./img0121/pic-{}.png'.format(file_name))
+
+
+                end_time = time.time()
+                duration = end_time - start_time
+
+                with open('./text_result_0124_{}.txt'.format(i_yangben), 'a+') as fp:
+                    print(file_name,rl_.env.config.ture_opt,round(sum(best_opt_list)/len(best_opt_list),2),round(duration/len(best_opt_list),2), file=fp)
+
+        except:
+            continue
 
     # epoch = 1
     # diag = job_diagram(schedule,job_execute_time,file_name,epoch)
@@ -408,3 +471,5 @@ if text is True:
 #             job_execute_time = hfs.inital_refset[key][index][2]
 #             obj = hfs.inital_refset[key][index][1]
 #             print('success')
+
+
