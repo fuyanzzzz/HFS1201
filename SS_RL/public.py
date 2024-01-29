@@ -21,7 +21,7 @@ Create Time: 2023/6/27 12:33
 
 
 import os
-from config import DataInfo
+from SS_RL.config import DataInfo
 
 data_folder = "data"  # 数据文件夹的路径
 # 获取data文件夹下所有的文件名
