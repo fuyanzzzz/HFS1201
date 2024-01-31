@@ -109,6 +109,7 @@ class PPO:
         self.epochs = epochs  # 一条序列的数据用来训练轮数
         self.eps = eps  # PPO中截断范围的参数
         self.device = device
+        self.coef = 0.1
 
     # 动作选择
     def take_action(self, state):
@@ -155,13 +156,15 @@ class PPO:
         advantage_list.reverse()
         # numpy --> tensor [b,1]
         advantage = torch.tensor(advantage_list, dtype=torch.float).to(self.device)
-
+        # probs = self.actor(states)
+        # entropy = -(probs * torch.log(probs + 1e-8)).sum(dim=-1).mean()
         # 策略网络给出每个动作的概率，根据action得到当前时刻下该动作的概率
         old_log_probs = torch.log(self.actor(states).gather(1, actions)).detach()
 
         # 一组数据训练 epochs 轮
         for _ in range(self.epochs):
             # 每一轮更新一次策略网络预测的状态
+            entropy = torch.distributions.Categorical(self.actor(states)).entropy()
             log_probs = torch.log(self.actor(states).gather(1, actions))
             # 新旧策略之间的比例
             ratio = torch.exp(log_probs - old_log_probs)
@@ -171,7 +174,8 @@ class PPO:
             surr2 = torch.clamp(ratio, 1 - self.eps, 1 + self.eps) * advantage
 
             # 策略网络的损失函数
-            actor_loss = torch.mean(-torch.min(surr1, surr2))
+            entropy_loss = entropy.mean()
+            actor_loss = torch.mean(-torch.min(surr1, surr2) + self.coef * entropy_loss)
             # 价值网络的损失函数，当前时刻的state_value - 下一时刻的state_value
             critic_loss = torch.mean(F.mse_loss(self.critic(states), td_target.detach()))
 
