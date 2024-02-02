@@ -94,7 +94,7 @@ class ValueNet(nn.Module):
 
 class PPO:
     def __init__(self, n_states, n_hiddens, n_actions,
-                 actor_lr, critic_lr, lmbda, epochs, eps, gamma, device):
+                 actor_lr, critic_lr, lmbda, epochs, eps, gamma, device,coef):
         # 实例化策略网络
         self.actor = PolicyNet(n_states, n_hiddens, n_actions).to(device)
         # 实例化价值网络
@@ -109,7 +109,7 @@ class PPO:
         self.epochs = epochs  # 一条序列的数据用来训练轮数
         self.eps = eps  # PPO中截断范围的参数
         self.device = device
-        self.coef = 0.1
+        self.coef = coef
 
     # 动作选择
     def take_action(self, state):
@@ -243,6 +243,7 @@ class Envior():
             self.use_actions[i_action] =[0, 0, 0]
 
         self.iprovement_time = 0
+        self.iter_no_opt = 0
 
 
     def gen_action_space(self):
@@ -427,6 +428,11 @@ class Envior():
         #     print(result, file=fp)
         #     print(next_state, file=fp)
         #     print('',file=fp)
+        if reward > 0:
+            self.iter_no_opt = 0
+        else:
+            self.iter_no_opt += 1
+
 
 
         return next_state,reward
@@ -685,8 +691,8 @@ class Envior():
 
 
         # if self.file_name == '1236_Instance_20_2_3_0,6_0,2_20_Rep1.txt':
-        # with open('./MDP.txt', 'a+') as fp:
-        #     print('s:{0},   r:{2},    a:{1}'.format(state, action_name, reward), file=fp)
+        with open('./MDP.txt', 'a+') as fp:
+            print('s:{0},   r:{2},    a:{1}'.format(state, action_name, reward), file=fp)
 
         # new_inital_refset = []
 
@@ -736,13 +742,14 @@ return_list = []  # 保存每个回合的return
 n_actions = 14
 n_states = 7
 class rl_main():
-    def __init__(self,i_text):
+    def __init__(self,i_text,i_cofe):
         self.n_action = n_actions
-        self.gen_nn()
+        self.gen_nn(i_cofe)
         self.i_text = i_text
 
 
-    def gen_nn(self):
+
+    def gen_nn(self,i_cofe):
         # self.init_paras()
 
         self.agent = PPO(n_states=n_states,  # 状态数
@@ -754,8 +761,8 @@ class rl_main():
                     epochs=10,  # 一组序列训练的轮次
                     eps=0.2,  # PPO中截断范围的参数
                     gamma=gamma,  # 折扣因子
-                    device=device
-                    )
+                    device=device,
+                    coef = i_cofe)
 
     # def init_paras(self):
         # self.GAMMA = 0.99
@@ -790,7 +797,8 @@ class rl_main():
 
         episode_step = []
 
-        while step_counter < int(self.env.config.jobs_num * 1.5):
+        # while step_counter < int(self.env.config.jobs_num * 1.5):
+        while self.env.iter_no_opt <= 50:
 
             # 动作选择
             action = self.agent.take_action(state)
@@ -799,7 +807,8 @@ class rl_main():
             # 根据（状态，动作）得到step序列
             next_state, reward = self.env.step(state, action, step_counter)
             done = False
-            if step_counter + 1 == int(self.env.config.jobs_num * 1.5):
+            if self.env.iter_no_opt == 50:
+            # if step_counter +1 == int(self.env.config.jobs_num * 1.5):
                 done = True
             # print(next_state,reward,done)
             episode_step.append([state, next_state, action, reward, done])
@@ -832,7 +841,7 @@ class rl_main():
         return_list.append(episode_reward)
         # 模型训练
         actor_loss,critic_loss = self.agent.learn(transition_dict)
-        self.agent.save_model(iter,i_yangben)
+        # self.agent.save_model(iter,i_yangben)
 
         return copy.deepcopy(self.env.inital_refset),episode_reward,actor_loss,critic_loss
 
@@ -849,16 +858,18 @@ class rl_main():
 
         episode_step = []
         # self.agent.load_model(iter)
-        while step_counter < int(self.env.config.jobs_num * 1.5):
-
+        while self.env.iter_no_opt <= 50:
+        # while step_counter < int(self.env.config.jobs_num * 1.5):
             # 动作选择
             action = self.agent.take_action(state)
 
             # 根据（状态，动作）得到step序列
             next_state, reward = self.env.step(state, action, step_counter)
             done = False
-            if step_counter + 1 == int(self.env.config.jobs_num * 1.5):
+            if self.env.iter_no_opt == 50:
+            # if step_counter + 1 == int(self.env.config.jobs_num * 1.5):
                 done = True
+
 
             episode_step.append([state, next_state, action, reward, done])
             state = next_state
