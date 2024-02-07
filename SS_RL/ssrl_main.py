@@ -226,9 +226,9 @@ while True:
             # 调整子图之间的垂直间距
             plt.tight_layout()
             # plt.pause(0.1)  # 用于动态展示图像
-            plt.savefig('./img0.02_0.9_0112_1/pic-{}.png'.format(int(len(txt_files)*iter +index)))
+            plt.savefig('./img0207/pic-{}.png'.format(int(len(txt_files)*iter +index)))
 
-            with open('./0.02_0.9_0112_1.txt', 'a+') as fp:
+            with open('./0207_q.txt', 'a+') as fp:
                 # 设置显示选项
                 pd.set_option('display.max_rows', None)
                 pd.set_option('display.max_columns', None)

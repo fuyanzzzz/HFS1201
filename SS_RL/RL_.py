@@ -131,33 +131,33 @@ class RL_Q():
         # self.action_space[2] = ['effe_insert_same_M_0','effe_swap_same_M_0']      # 同一个机器
         # self.action_space[3] = ['effe_insert_other_M_0','effe_swap_other_M_0']      # 同一个机器
 
-        # 在第二阶段选择目标值最大的工件之一，进行insert/swap操作effe_insert_same_AF_1
-        self.action_space[0] = ['effe_insert_same_DM_1', 'effe_swap_same_DM_1']     # 同一个机器
-        self.action_space[1] = ['effe_insert_other_DM_1', 'effe_swap_other_DM_1']     # 同一个机器
-
-        self.action_space[2] = ['effe_insert_same_EM_1', 'effe_swap_same_EM_1']     # 同一个机器
-        self.action_space[3] = ['effe_insert_other_EM_1', 'effe_swap_other_EM_1']     # 同一个机器
-
-        # 在第二阶段随机选择工件进行insert/swap:
-        self.action_space[4] = ['rand_insert_other_M_1','rand_swap_other_M_1']      # 同一个机器
-        self.action_space[5] = ['rand_insert_same_M_1','rand_swap_same_M_1',]      # 同一个机器
-        # self.action_space[4] = ['effe_insert_same_M_0','effe_swap_same_M_0','effe_insert_other_M_0','effe_swap_other_M_0']      # 同一个机器
-
-
-        # 第1阶段，单位可改善最多的方向的加工时间最小的工件，在同一机器/其他机器，进行insert/swap
-        # self.action_space[10] = ['sort_stuck_A_S0_1']
-        self.action_space[6] = ['dire_insert_same_dweight_1',]
-        self.action_space[7] = ['dire_insert_other_dweight_1']
-
-        self.action_space[8] = ['dire_insert_same_eweight_1',]
-        self.action_space[9] = ['dire_insert_other_eweight_1']
-
-        self.action_space[10] = ['effe_insert_same_DRM_1','effe_swap_same_DRM_1']      # 同一个机器
-        self.action_space[11] = ['effe_insert_other_DRM_1','effe_swap_other_DRM_1']      # 同一个机器
-
-
-        self.action_space[12] = ['effe_insert_same_ERM_1','effe_swap_same_ERM_1']      # 同一个机器
-        self.action_space[13] = ['effe_insert_other_ERM_1','effe_swap_other_ERM_1']      # 同一个机器
+        # # 在第二阶段选择目标值最大的工件之一，进行insert/swap操作effe_insert_same_AF_1
+        # self.action_space[0] = ['effe_insert_same_DM_1', 'effe_swap_same_DM_1']     # 同一个机器
+        # self.action_space[1] = ['effe_insert_other_DM_1', 'effe_swap_other_DM_1']     # 同一个机器
+        #
+        # self.action_space[2] = ['effe_insert_same_EM_1', 'effe_swap_same_EM_1']     # 同一个机器
+        # self.action_space[3] = ['effe_insert_other_EM_1', 'effe_swap_other_EM_1']     # 同一个机器
+        #
+        # # 在第二阶段随机选择工件进行insert/swap:
+        # self.action_space[4] = ['rand_insert_other_M_1','rand_swap_other_M_1']      # 同一个机器
+        # self.action_space[5] = ['rand_insert_same_M_1','rand_swap_same_M_1',]      # 同一个机器
+        # # self.action_space[4] = ['effe_insert_same_M_0','effe_swap_same_M_0','effe_insert_other_M_0','effe_swap_other_M_0']      # 同一个机器
+        #
+        #
+        # # 第1阶段，单位可改善最多的方向的加工时间最小的工件，在同一机器/其他机器，进行insert/swap
+        # # self.action_space[10] = ['sort_stuck_A_S0_1']
+        # self.action_space[6] = ['dire_insert_same_dweight_1',]
+        # self.action_space[7] = ['dire_insert_other_dweight_1']
+        #
+        # self.action_space[8] = ['dire_insert_same_eweight_1',]
+        # self.action_space[9] = ['dire_insert_other_eweight_1']
+        #
+        # self.action_space[10] = ['effe_insert_same_DRM_1','effe_swap_same_DRM_1']      # 同一个机器
+        # self.action_space[11] = ['effe_insert_other_DRM_1','effe_swap_other_DRM_1']      # 同一个机器
+        #
+        #
+        # self.action_space[12] = ['effe_insert_same_ERM_1','effe_swap_same_ERM_1']      # 同一个机器
+        # self.action_space[13] = ['effe_insert_other_ERM_1','effe_swap_other_ERM_1']      # 同一个机器
 
 
 
@@ -193,6 +193,24 @@ class RL_Q():
         # self.action_space[14] = ['rand_insert_same_R_1','rand_swap_same_R_1']
         # self.action_space[7] = ['rand_insert_other_R_1', 'rand_swap_other_R_1']
 
+        # 以延误为单位的insert，
+        self.action_space[0] = ['dire_insert_same_dweight_1', 'dire_insert_other_dweight_1', 'effe_insert_same_DRM_1',
+                                'effe_insert_other_DRM_1']
+
+        # 以延误为单位的swap
+        self.action_space[1] = ['effe_swap_same_DRM_1', 'effe_swap_other_DRM_1']
+        # 以早到为单位的insert
+        self.action_space[2] = ['dire_insert_same_eweight_1', 'dire_insert_other_eweight_1', 'effe_insert_same_ERM_1',
+                                'effe_insert_other_ERM_1']
+        # 以早到为单位的sawp
+        self.action_space[3] = ['effe_swap_same_ERM_1', 'effe_swap_other_ERM_1']
+        # 以卡住为单位，移动第一阶段
+
+        # 完全随机工件 insert
+        self.action_space[4] = ['rand_insert_other_M_1', 'rand_insert_same_M_1']
+        # 完全随机工件 swap
+        self.action_space[5] = ['rand_swap_other_M_1', 'rand_swap_same_M_1']
+
 
 
     def choose_action(self,state, q_table):
@@ -210,10 +228,19 @@ class RL_Q():
         # else:
         #     action_name = state_table.idxmax()
 
-        if (np.random.uniform() > EPSILON) or ((state_table == 0).all()) or self.iter_index < 30:
+        if (np.random.uniform() > EPSILON) or ((state_table == 0).all()) or self.iter_index < 5:
             action_name = np.random.choice(range(len(self.action_space)))
         else:
-            action_name = state_table.idxmax()
+            total_weight = sum(state_table)
+            cumulative_weights = [sum(state_table[:i + 1]) for i in range(len(state_table))]  # 计算累积权重
+            rand_val = random.uniform(0, total_weight)  # 生成一个随机值
+
+            # 根据随机值选择元素
+            for item, cumulative_weight in zip(range(len(state_table)), cumulative_weights):
+                if rand_val < cumulative_weight:
+                    action_name = item
+                    break
+            # action_name = state_table.idxmax()
         # action_name = np.random.choice(range(len(self.action_space)))
         return action_name
 
@@ -377,7 +404,7 @@ class RL_Q():
 
         return next_state
 
-    def get_reward(self, cur_best_opt,impro_degree,diversity_degree,old_inital_refset):
+    def get_reward(self,state,next_state):
         # reward = 0
         # if (self.best_opt - cur_best_opt) > 0:
         #     reward = (self.best_opt - cur_best_opt) / self.inital_obj
@@ -424,14 +451,26 @@ class RL_Q():
         # 改进了几个解，就更新几个
 
 
-        # 获取当下的平均目标值
-        update_num = 0
-        for i in range(int(len(self.inital_refset) / 2)):
-            if old_inital_refset[i][0] != self.inital_refset[i][0] and self.inital_refset[i][1] < \
-                    old_inital_refset[i][1]:
-                update_num += 1
+        # # 获取当下的平均目标值
+        # update_num = 0
+        # for i in range(int(len(self.inital_refset) / 2)):
+        #     if old_inital_refset[i][0] != self.inital_refset[i][0] and self.inital_refset[i][1] < \
+        #             old_inital_refset[i][1]:
+        #         update_num += 1
+        #
+        # reward = update_num
 
-        reward = update_num
+        state_reward = {}
+        for i_item in range(0,9):
+            if i_item <= 2 :
+                state_reward[i_item] = i_item
+            elif i_item <= 5:
+                state_reward[i_item] = i_item - 3
+            else:
+                state_reward[i_item] = i_item - 6
+
+        reward = state_reward[state] - state_reward[next_state]
+
 
 
         return reward
@@ -671,7 +710,6 @@ class RL_Q():
         # impro_mean_obj = self.ori_mean_obj - cur_mean_obj
 
 
-        reward = self.get_reward(cur_best_opt,impro_degree,diversity_degree,old_inital_refset)
 
 
         if cur_best_opt < self.best_opt:
@@ -685,11 +723,11 @@ class RL_Q():
         # 状态转移函数
         state_name = self.state_space[state]
         next_state = self.get_state(self.trial, impro_degree, diversity_degree)
-
+        reward = self.get_reward(state,next_state)
         next_state_name = self.state_space[next_state]
-        if self.file_name == '1236_Instance_20_2_3_0,6_0,2_20_Rep1.txt':
-            with open('./MDP.txt', 'a+') as fp:
-                print('s:{0},   r:{2},    a:{1},    s_:{3}'.format(state_name, action_name, reward, next_state_name), file=fp)
+        # if self.file_name == '1236_Instance_20_2_3_0,6_0,2_20_Rep1.txt':
+        with open('./MDP.txt', 'a+') as fp:
+            print('s:{0},   r:{2},    a:{1},    s_:{3}'.format(state_name, action_name, reward, next_state_name), file=fp)
 
 
         new_inital_refset = copy.deepcopy(self.inital_refset)
