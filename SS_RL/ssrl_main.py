@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 N_STATES = 9
 ACTIONS = ['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswap0','effeswap1','randswap0','randswap1']
 # 1. 生成初始解，这个没有问题
-actions = range(14)
+actions = range(6)
 max_iter = 3
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -37,7 +37,7 @@ pd.reset_option('display.max_columns')
 q_table = pd.DataFrame(
             np.zeros((N_STATES, len(actions))),columns=actions)
 
-data_folder = "data_1"  # 数据文件夹的路径
+data_folder = "data"  # 数据文件夹的路径
 # 获取data文件夹下所有的文件名
 
 # 新建一个变量，用于存储每个动作是否有改进，以及改进多少
@@ -45,24 +45,33 @@ use_action_dict = {}
 action_space = ['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswap0','effeswap1','randswap0','randswap1']
 for i_action in action_space:
     use_action_dict[i_action] = [0,0]
-q_value_changes = []
-CUM_REWARD = []
-case_CUM_REWARD = []
-case_CUM_obj = []
-INDEX = []
 
 train = False
 text = True
 
 
 
+stop_iter_list = [20,30,50,100]
+# stop_iter_list = [20]
 txt_files = [f for f in os.listdir(data_folder) if f.endswith(".txt")]
 iter = 0
-if train is True:
-    while True:
-        if iter >= max_iter:
-            break
+# while True:
+    # if iter >= max_iter:
+    #     break
+for i_stop_iter in stop_iter_list:
+    q_value_changes = []
+    CUM_REWARD = []
+    case_CUM_REWARD = []
+    case_CUM_obj = []
+    INDEX = []
+    try:
         for index, file_name in enumerate(txt_files):
+            split_list = file_name.split('_')
+            # if (int(split_list[0]) - iter) % 5 != 0:
+            #     continue
+            if (int(split_list[0]) - 4) % 5 == 0:
+                continue
+
             time_cost = 0
             start_time = time.time()
             # file_name = '1258_Instance_20_2_3_0,6_1_20_Rep3.txt'
@@ -74,7 +83,7 @@ if train is True:
 
             hfs.initial_solu()
 
-            rl_ = RL_Q(N_STATES,ACTIONS,hfs.inital_refset,q_table,file_name,len(txt_files)*iter +index)
+            rl_ = RL_Q(N_STATES,ACTIONS,hfs.inital_refset,q_table,file_name,len(txt_files)*iter +index,i_stop_iter)
             hfs.inital_refset,q_table,delta, REWARD = rl_.rl()
             print(hfs.inital_refset[0][1])
             opt_item = hfs.inital_refset[0]
@@ -90,7 +99,7 @@ if train is True:
             q_value_changes.append(delta)
             CUM_REWARD.append(REWARD)
 
-            INDEX.append(len(txt_files)*iter +index)
+            INDEX.append(len(CUM_REWARD))
 
             fp = open('./time_cost.txt', 'a+')
             if index == 0:
@@ -140,6 +149,7 @@ if train is True:
             plt.savefig('./img1203/pic-{}.png'.format(len(txt_files)*iter +index))
             # plt.savefig('./img1203/pic-{}.png'.format(len(txt_files)*iter +index))
 
+
             # 每过一幕验证一下奖励
             time_cost = 0
             start_time = time.time()
@@ -156,7 +166,7 @@ if train is True:
             # plt.savefig('./img1203/pic-{}.png'.format(index))
             # plt.show()
 
-            rl_ = RL_Q(N_STATES,ACTIONS,hfs.inital_refset,q_table,case_file_name,len(txt_files)*iter +index)
+            rl_ = RL_Q(N_STATES,ACTIONS,hfs.inital_refset,q_table,case_file_name,len(txt_files)*iter +index,i_stop_iter)
             best_opt_execute ,CUM_REWARD_case= rl_.rl_execute()
             with open('./MDP.txt', 'a+') as fp:
                 print('幕：{2},    目标值:{0},   奖励:{1},'.format(best_opt_execute, CUM_REWARD_case,len(txt_files)*iter +index), file=fp)
@@ -231,9 +241,9 @@ if train is True:
                 # 调整子图之间的垂直间距
                 plt.tight_layout()
                 # plt.pause(0.1)  # 用于动态展示图像
-                plt.savefig('./img0207/pic-{}.png'.format(int(len(txt_files)*iter +index)))
+                plt.savefig('./img0207_{}/pic-{}.png'.format(i_stop_iter,int(len(txt_files)*iter +index)))
 
-                with open('./0207_q.txt', 'a+') as fp:
+                with open('./0207_q_{}.txt'.format(i_stop_iter), 'a+') as fp:
                     # 设置显示选项
                     pd.set_option('display.max_rows', None)
                     pd.set_option('display.max_columns', None)
@@ -252,71 +262,8 @@ if train is True:
                 # print(len(txt_files)*iter +index,rl_.q_table, file=fp)
                 # fp.close()
         iter += 1
-
-if text is True:
-    # 以下参数需要确认
-    try:
-        iter = 432
-        i_text = 0.8
-
-
-        for index, file_name in enumerate(txt_files):
-
-            split_list = file_name.split('_')
-            if (int(split_list[0]) - 4) % 5 != 0:
-                continue
-            # if int(split_list[0]) % 5 != 0:
-            #     continue
-            time_cost = 0
-            start_time = time.time()
-            # 初始化
-            hfs = HFS(file_name)
-            hfs.initial_solu()
-            inital_obj = hfs.inital_refset[0][1]
-            best_opt_list = []
-
-            rl_ = RL_Q(N_STATES, ACTIONS, hfs.inital_refset, q_table, file_name, len(txt_files) * iter + index)
-
-            for i in range(3):
-                best_opt_execute, CUM_REWARD_case = rl_.rl_execute()
-                best_opt_list.append(best_opt_execute)
-                with open('./MDP.txt', 'a+') as fp:
-                    print(best_opt_execute, file=fp)
-                    print(file_name, file=fp)
-                    if i == 9:
-                        print('目标值列表：', best_opt_list, file=fp)
-                    print('', file=fp)
-                    print('', file=fp)
-
-            # best_opt_execute, CUM_REWARD_case = rl_.rl_excuse_case(hfs.inital_refset, file_name, len(case_CUM_REWARD),
-            #                                                        inital_obj)
-            # best_opt_list.append(best_opt_execute)
-            with open('./MDP.txt', 'a+') as fp:
-                print(best_opt_execute, file=fp)
-                print(file_name, file=fp)
-                print('', file=fp)
-                print('', file=fp)
-
-            # from SS_RL.diagram import job_diagram
-            # import matplotlib.pyplot as plt
-            #
-            # schedule = rl_.env.inital_refset[0][0]
-            # job_execute_time = rl_.env.inital_refset[0][2]
-            # split_list = file_name.split('_')
-            # dia = job_diagram(schedule, job_execute_time, file_name, split_list[0])
-            # dia.pre()
-            # plt.savefig('./img0121/pic-{}.png'.format(file_name))
-
-            end_time = time.time()
-            duration = end_time - start_time
-
-            with open('./text_result_0208.txt', 'a+') as fp:
-                print(file_name, rl_.config.ture_opt, round(sum(best_opt_list) / len(best_opt_list), 2),
-                      round(duration / len(best_opt_list), 2), file=fp)
-
     except:
-        pass
-
+        continue
 
 
     # epoch = 1

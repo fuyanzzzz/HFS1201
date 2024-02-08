@@ -48,7 +48,7 @@ TerminalFlag = "terminal"
 
 
 class RL_Q():
-    def __init__(self,n_states,n_actions,inital_refset,q_table,file_name,iter):
+    def __init__(self,n_states,n_actions,inital_refset,q_table,file_name,iter,stop_iter):
 
         self.trial = 0
         self.ori_mean_obj = 9999999
@@ -71,6 +71,8 @@ class RL_Q():
         # self.action_space_1 = ['effeinsert0', 'effeinsert1', 'randinsert0', 'randinsert1', 'effeswap0', 'effeswap1',
         #                 'randswap0', 'randswap1']
         self.iter_index = iter
+        self.not_opt_iter = 0
+        self.stop_iter = stop_iter
 
 
         '''
@@ -231,13 +233,20 @@ class RL_Q():
         if (np.random.uniform() > EPSILON) or ((state_table == 0).all()) or self.iter_index < 5:
             action_name = np.random.choice(range(len(self.action_space)))
         else:
-            total_weight = sum(state_table)
-            cumulative_weights = [sum(state_table[:i + 1]) for i in range(len(state_table))]  # 计算累积权重
+            new_list = state_table
+            min_value = min(new_list)
+            if min_value <0:
+                for i in range(len(new_list)):
+                    new_list[i] += -min_value
+
+
+            total_weight = sum(new_list)
+            cumulative_weights = [sum(new_list[:i + 1]) for i in range(len(new_list))]  # 计算累积权重
             rand_val = random.uniform(0, total_weight)  # 生成一个随机值
 
             # 根据随机值选择元素
-            for item, cumulative_weight in zip(range(len(state_table)), cumulative_weights):
-                if rand_val < cumulative_weight:
+            for item, cumulative_weight in zip(range(len(new_list)), cumulative_weights):
+                if rand_val <= cumulative_weight:
                     action_name = item
                     break
             # action_name = state_table.idxmax()
@@ -715,9 +724,11 @@ class RL_Q():
         if cur_best_opt < self.best_opt:
             self.trial = 0
             self.best_opt = cur_best_opt
+            self.not_opt_iter = 0
 
         else:
             self.trial += 1
+            self.not_opt_iter +=1
 
 
         # 状态转移函数
@@ -774,17 +785,19 @@ class RL_Q():
         # update_env(S, episode, step_counter)
         self.max_iter = 0
         a = 0
+        history_R = []
         # while self.max_iter < 3:
         with open('./MDP.txt', 'a+') as fp:
             print('', file=fp)
-        while step_counter < self.config.jobs_num*2:
+        while self.not_opt_iter <= self.stop_iter:
             print('数据集的名字：{0}'.format(self.file_name))
             A = self.choose_action(S, self.q_table)
             S_, R = self.step(S, A)
             CUM_REWARD += R
+            history_R.append(R)
             q_predict = self.q_table.loc[S, A]
 
-            if S_ == 7 and self.max_iter >= 3:
+            if self.not_opt_iter == self.stop_iter:
                 q_target = R
             else:
                 q_target = R + GAMMA * self.q_table.loc[S_, :].max()
@@ -814,7 +827,7 @@ class RL_Q():
         CUM_REWARD = 0
 
         self.max_iter = 0
-        while step_counter < self.config.jobs_num:
+        while self.not_opt_iter <= self.stop_iter:
             A = self.choose_action(S, self.q_table)
             S_, R = self.step(S, A)
             CUM_REWARD += R
