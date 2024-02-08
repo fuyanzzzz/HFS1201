@@ -51,202 +51,271 @@ case_CUM_REWARD = []
 case_CUM_obj = []
 INDEX = []
 
+train = False
+text = True
+
+
 
 txt_files = [f for f in os.listdir(data_folder) if f.endswith(".txt")]
 iter = 0
-while True:
-    if iter >= max_iter:
-        break
-    for index, file_name in enumerate(txt_files):
-        time_cost = 0
-        start_time = time.time()
-        # file_name = '1258_Instance_20_2_3_0,6_1_20_Rep3.txt'
-        # if index == 0:
-        #     continue
-        print('换数据集啦{0}'.format(file_name))
-        print('第{0}幕'.format(index))
-        hfs = HFS(file_name)
+if train is True:
+    while True:
+        if iter >= max_iter:
+            break
+        for index, file_name in enumerate(txt_files):
+            time_cost = 0
+            start_time = time.time()
+            # file_name = '1258_Instance_20_2_3_0,6_1_20_Rep3.txt'
+            # if index == 0:
+            #     continue
+            print('换数据集啦{0}'.format(file_name))
+            print('第{0}幕'.format(index))
+            hfs = HFS(file_name)
 
-        hfs.initial_solu()
+            hfs.initial_solu()
 
-        rl_ = RL_Q(N_STATES,ACTIONS,hfs.inital_refset,q_table,file_name,len(txt_files)*iter +index)
-        hfs.inital_refset,q_table,delta, REWARD = rl_.rl()
-        print(hfs.inital_refset[0][1])
-        opt_item = hfs.inital_refset[0]
-        schedule = opt_item[0]
-        obj = opt_item[1]
-        job_execute_time = opt_item[2]
+            rl_ = RL_Q(N_STATES,ACTIONS,hfs.inital_refset,q_table,file_name,len(txt_files)*iter +index)
+            hfs.inital_refset,q_table,delta, REWARD = rl_.rl()
+            print(hfs.inital_refset[0][1])
+            opt_item = hfs.inital_refset[0]
+            schedule = opt_item[0]
+            obj = opt_item[1]
+            job_execute_time = opt_item[2]
 
-        end_time = time.time()
+            end_time = time.time()
 
-        # 计算函数运行时长
-        duration = end_time - start_time
+            # 计算函数运行时长
+            duration = end_time - start_time
 
-        q_value_changes.append(delta)
-        CUM_REWARD.append(REWARD)
+            q_value_changes.append(delta)
+            CUM_REWARD.append(REWARD)
 
-        INDEX.append(len(txt_files)*iter +index)
+            INDEX.append(len(txt_files)*iter +index)
 
-        fp = open('./time_cost.txt', 'a+')
-        if index == 0:
-            print('索引   文件名   耗时  数据最优解   实验最优解 ', file=fp)
-        print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files)*iter +index,file_name,round(duration,2),rl_.config.ture_opt,rl_.best_opt), file=fp)
-        fp.close()
-
-        with open('./time_cost.txt', 'a+') as fp:
-            # 设置显示选项
-            pd.set_option('display.max_rows', None)
-            pd.set_option('display.max_columns', None)
-
-            # 将 DataFrame 写入文件
-            # print(index, q_table, file=fp)
-
+            fp = open('./time_cost.txt', 'a+')
             if index == 0:
                 print('索引   文件名   耗时  数据最优解   实验最优解 ', file=fp)
-            print()
-            print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files) * iter + index, file_name, round(duration, 2),
-                                                        rl_.config.ture_opt, rl_.best_opt), file=fp)
-            # sort_time = 0
-            # effe_time = 0
-            # rand_time = 0
-            # for item in rl_.use_actions.keys():
-            #     # print(item, rl_.use_actions[item],round(rl_.use_actions[item][1]/max(rl_.use_actions[item][0],1),3), file=fp)
-            #     if item[:4] == 'sort':
-            #         sort_time += rl_.use_actions[item][0]
-            #     elif item[:4] == 'effe':
-            #         effe_time += rl_.use_actions[item][0]
-            #     else:
-            #         rand_time += rl_.use_actions[item][0]
-            # print('sort_time    ',sort_time, file=fp)
-            # print('effe_time    ',effe_time, file=fp)
-            # print('rand_time    ',rand_time, file=fp)
-            # print('total_time    ',rand_time+sort_time+effe_time, file=fp)
-            # print('effe_time占比    ',round(effe_time/(rand_time+sort_time+effe_time),2), file=fp)
-            # print('effe_time + rand_time 占比    ',round((effe_time+rand_time)/(rand_time+sort_time+effe_time),2), file=fp)
-            # 重置显示选项为默认值
-            pd.reset_option('display.max_rows')
-            pd.reset_option('display.max_columns')
+            print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files)*iter +index,file_name,round(duration,2),rl_.config.ture_opt,rl_.best_opt), file=fp)
+            fp.close()
 
-        from SS_RL.diagram import job_diagram
-        import matplotlib.pyplot as plt
-
-        dia = job_diagram(schedule, job_execute_time, file_name, len(txt_files)*iter +index)
-        dia.pre()
-        plt.savefig('./img1203/pic-{}.png'.format(len(txt_files)*iter +index))
-        # plt.savefig('./img1203/pic-{}.png'.format(len(txt_files)*iter +index))
-
-        # 每过一幕验证一下奖励
-        time_cost = 0
-        start_time = time.time()
-        case_file_name = '1236_Instance_20_2_3_0,6_0,2_20_Rep1.txt'
-        # case_file_name = '1259_Instance_20_2_3_0,6_1_20_Rep4.txt'
-        hfs = HFS(case_file_name)
-
-        hfs.initial_solu()
-
-        print('当前目标值：{0}'.format(hfs.inital_refset[0][1]))
-
-        # dia = job_diagram(hfs.inital_refset[0][0], hfs.inital_refset[0][2], case_file_name, index)
-        # dia.pre()
-        # plt.savefig('./img1203/pic-{}.png'.format(index))
-        # plt.show()
-
-        rl_ = RL_Q(N_STATES,ACTIONS,hfs.inital_refset,q_table,case_file_name,len(txt_files)*iter +index)
-        best_opt_execute ,CUM_REWARD_case= rl_.rl_execute()
-        with open('./MDP.txt', 'a+') as fp:
-            print('幕：{2},    目标值:{0},   奖励:{1},'.format(best_opt_execute, CUM_REWARD_case,len(txt_files)*iter +index), file=fp)
-            print('', file=fp)
-            print('', file=fp)
-
-        case_CUM_obj.append(best_opt_execute)
-        case_CUM_REWARD.append(CUM_REWARD_case)
-        end_time = time.time()
-        duration = end_time - start_time
-
-        with open('./time_cost.txt', 'a+') as fp:
-            # 设置显示选项
-            pd.set_option('display.max_rows', None)
-            pd.set_option('display.max_columns', None)
-
-            # 将 DataFrame 写入文件
-            # print(index, q_table, file=fp)
-
-            if index == 0:
-                print('索引   文件名   耗时  数据最优解   实验最优解 ', file=fp)
-            print()
-            print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files) * iter + index, case_file_name, round(duration, 2),
-                                                        rl_.config.ture_opt, rl_.best_opt), file=fp)
-            # sort_time = 0
-            # effe_time = 0
-            # rand_time = 0
-            # for item in rl_.use_actions.keys():
-            #     print(item, rl_.use_actions[item],round(rl_.use_actions[item][1]/max(rl_.use_actions[item][0],1),3), file=fp)
-            #     if item[:4] == 'sort':
-            #         sort_time += rl_.use_actions[item][0]
-            #     elif item[:4] == 'effe':
-            #         effe_time += rl_.use_actions[item][0]
-            #     else:
-            #         rand_time += rl_.use_actions[item][0]
-
-        # from SS_RL.diagram import job_diagram
-        # import matplotlib.pyplot as plt
-        #
-        # dia = job_diagram(rl_.schedule, rl_.job_execute_time, rl_.file_name, index)
-        # dia.pre()
-        # plt.savefig('./img1203/pic-{}.png'.format(index))
-
-
-
-
-        # plt.plot(q_value_changes)
-        # plt.xlabel('训练轮次')
-        # plt.ylabel('Q值变化')
-        # plt.title('Q值变化随训练轮次的变化')
-        # plt.pause(0.1)  # 用于动态展示图像
-
-        if (len(txt_files)*iter +index) % 20 == 0:
-            fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, sharex=True)
-
-            ax1.plot(INDEX, q_value_changes, label='子图1', color='blue')
-            ax1.set_ylabel('Q值变化程度')
-            ax1.legend()
-
-            ax2.plot(INDEX, CUM_REWARD, label='子图2', color='red')
-            ax2.set_ylabel('累计奖励')
-            ax2.legend()
-
-            ax3.plot(INDEX, case_CUM_REWARD, label='子图3', color='green')
-            ax3.set_ylabel('实验案例')
-            ax3.legend()
-
-            ax4.plot(INDEX, case_CUM_obj, label='子图4', color='yellow')
-            ax4.set_ylabel('实验案例目标值')
-            ax4.legend()
-
-            # 调整子图之间的垂直间距
-            plt.tight_layout()
-            # plt.pause(0.1)  # 用于动态展示图像
-            plt.savefig('./img0207/pic-{}.png'.format(int(len(txt_files)*iter +index)))
-
-            with open('./0207_q.txt', 'a+') as fp:
+            with open('./time_cost.txt', 'a+') as fp:
                 # 设置显示选项
                 pd.set_option('display.max_rows', None)
                 pd.set_option('display.max_columns', None)
 
                 # 将 DataFrame 写入文件
-                print(index, q_table, file=fp)
-                # for item in rl_.use_actions.keys():
-                #     print(item,rl_.use_actions[item], file=fp)
+                # print(index, q_table, file=fp)
 
+                if index == 0:
+                    print('索引   文件名   耗时  数据最优解   实验最优解 ', file=fp)
+                print()
+                print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files) * iter + index, file_name, round(duration, 2),
+                                                            rl_.config.ture_opt, rl_.best_opt), file=fp)
+                # sort_time = 0
+                # effe_time = 0
+                # rand_time = 0
+                # for item in rl_.use_actions.keys():
+                #     # print(item, rl_.use_actions[item],round(rl_.use_actions[item][1]/max(rl_.use_actions[item][0],1),3), file=fp)
+                #     if item[:4] == 'sort':
+                #         sort_time += rl_.use_actions[item][0]
+                #     elif item[:4] == 'effe':
+                #         effe_time += rl_.use_actions[item][0]
+                #     else:
+                #         rand_time += rl_.use_actions[item][0]
+                # print('sort_time    ',sort_time, file=fp)
+                # print('effe_time    ',effe_time, file=fp)
+                # print('rand_time    ',rand_time, file=fp)
+                # print('total_time    ',rand_time+sort_time+effe_time, file=fp)
+                # print('effe_time占比    ',round(effe_time/(rand_time+sort_time+effe_time),2), file=fp)
+                # print('effe_time + rand_time 占比    ',round((effe_time+rand_time)/(rand_time+sort_time+effe_time),2), file=fp)
                 # 重置显示选项为默认值
                 pd.reset_option('display.max_rows')
                 pd.reset_option('display.max_columns')
 
+            from SS_RL.diagram import job_diagram
+            import matplotlib.pyplot as plt
 
-            # fp = open('./0.05_0.9_1207_2.txt', 'a+')
-            # print(len(txt_files)*iter +index,rl_.q_table, file=fp)
-            # fp.close()
-    iter += 1
+            dia = job_diagram(schedule, job_execute_time, file_name, len(txt_files)*iter +index)
+            dia.pre()
+            plt.savefig('./img1203/pic-{}.png'.format(len(txt_files)*iter +index))
+            # plt.savefig('./img1203/pic-{}.png'.format(len(txt_files)*iter +index))
+
+            # 每过一幕验证一下奖励
+            time_cost = 0
+            start_time = time.time()
+            case_file_name = '1236_Instance_20_2_3_0,6_0,2_20_Rep1.txt'
+            # case_file_name = '1259_Instance_20_2_3_0,6_1_20_Rep4.txt'
+            hfs = HFS(case_file_name)
+
+            hfs.initial_solu()
+
+            print('当前目标值：{0}'.format(hfs.inital_refset[0][1]))
+
+            # dia = job_diagram(hfs.inital_refset[0][0], hfs.inital_refset[0][2], case_file_name, index)
+            # dia.pre()
+            # plt.savefig('./img1203/pic-{}.png'.format(index))
+            # plt.show()
+
+            rl_ = RL_Q(N_STATES,ACTIONS,hfs.inital_refset,q_table,case_file_name,len(txt_files)*iter +index)
+            best_opt_execute ,CUM_REWARD_case= rl_.rl_execute()
+            with open('./MDP.txt', 'a+') as fp:
+                print('幕：{2},    目标值:{0},   奖励:{1},'.format(best_opt_execute, CUM_REWARD_case,len(txt_files)*iter +index), file=fp)
+                print('', file=fp)
+                print('', file=fp)
+
+            case_CUM_obj.append(best_opt_execute)
+            case_CUM_REWARD.append(CUM_REWARD_case)
+            end_time = time.time()
+            duration = end_time - start_time
+
+            with open('./time_cost.txt', 'a+') as fp:
+                # 设置显示选项
+                pd.set_option('display.max_rows', None)
+                pd.set_option('display.max_columns', None)
+
+                # 将 DataFrame 写入文件
+                # print(index, q_table, file=fp)
+
+                if index == 0:
+                    print('索引   文件名   耗时  数据最优解   实验最优解 ', file=fp)
+                print()
+                print('{0}   {1}   {2}   {3}   {4} '.format(len(txt_files) * iter + index, case_file_name, round(duration, 2),
+                                                            rl_.config.ture_opt, rl_.best_opt), file=fp)
+                # sort_time = 0
+                # effe_time = 0
+                # rand_time = 0
+                # for item in rl_.use_actions.keys():
+                #     print(item, rl_.use_actions[item],round(rl_.use_actions[item][1]/max(rl_.use_actions[item][0],1),3), file=fp)
+                #     if item[:4] == 'sort':
+                #         sort_time += rl_.use_actions[item][0]
+                #     elif item[:4] == 'effe':
+                #         effe_time += rl_.use_actions[item][0]
+                #     else:
+                #         rand_time += rl_.use_actions[item][0]
+
+            # from SS_RL.diagram import job_diagram
+            # import matplotlib.pyplot as plt
+            #
+            # dia = job_diagram(rl_.schedule, rl_.job_execute_time, rl_.file_name, index)
+            # dia.pre()
+            # plt.savefig('./img1203/pic-{}.png'.format(index))
+
+
+
+
+            # plt.plot(q_value_changes)
+            # plt.xlabel('训练轮次')
+            # plt.ylabel('Q值变化')
+            # plt.title('Q值变化随训练轮次的变化')
+            # plt.pause(0.1)  # 用于动态展示图像
+
+            if (len(txt_files)*iter +index) % 20 == 0:
+                fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, sharex=True)
+
+                ax1.plot(INDEX, q_value_changes, label='子图1', color='blue')
+                ax1.set_ylabel('Q值变化程度')
+                ax1.legend()
+
+                ax2.plot(INDEX, CUM_REWARD, label='子图2', color='red')
+                ax2.set_ylabel('累计奖励')
+                ax2.legend()
+
+                ax3.plot(INDEX, case_CUM_REWARD, label='子图3', color='green')
+                ax3.set_ylabel('实验案例')
+                ax3.legend()
+
+                ax4.plot(INDEX, case_CUM_obj, label='子图4', color='yellow')
+                ax4.set_ylabel('实验案例目标值')
+                ax4.legend()
+
+                # 调整子图之间的垂直间距
+                plt.tight_layout()
+                # plt.pause(0.1)  # 用于动态展示图像
+                plt.savefig('./img0207/pic-{}.png'.format(int(len(txt_files)*iter +index)))
+
+                with open('./0207_q.txt', 'a+') as fp:
+                    # 设置显示选项
+                    pd.set_option('display.max_rows', None)
+                    pd.set_option('display.max_columns', None)
+
+                    # 将 DataFrame 写入文件
+                    print(index, q_table, file=fp)
+                    # for item in rl_.use_actions.keys():
+                    #     print(item,rl_.use_actions[item], file=fp)
+
+                    # 重置显示选项为默认值
+                    pd.reset_option('display.max_rows')
+                    pd.reset_option('display.max_columns')
+
+
+                # fp = open('./0.05_0.9_1207_2.txt', 'a+')
+                # print(len(txt_files)*iter +index,rl_.q_table, file=fp)
+                # fp.close()
+        iter += 1
+
+if text is True:
+    # 以下参数需要确认
+    try:
+        iter = 432
+        i_text = 0.8
+
+
+        for index, file_name in enumerate(txt_files):
+
+            split_list = file_name.split('_')
+            if (int(split_list[0]) - 4) % 5 != 0:
+                continue
+            # if int(split_list[0]) % 5 != 0:
+            #     continue
+            time_cost = 0
+            start_time = time.time()
+            # 初始化
+            hfs = HFS(file_name)
+            hfs.initial_solu()
+            inital_obj = hfs.inital_refset[0][1]
+            best_opt_list = []
+
+            rl_ = RL_Q(N_STATES, ACTIONS, hfs.inital_refset, q_table, file_name, len(txt_files) * iter + index)
+
+            for i in range(3):
+                best_opt_execute, CUM_REWARD_case = rl_.rl_execute()
+                best_opt_list.append(best_opt_execute)
+                with open('./MDP.txt', 'a+') as fp:
+                    print(best_opt_execute, file=fp)
+                    print(file_name, file=fp)
+                    if i == 9:
+                        print('目标值列表：', best_opt_list, file=fp)
+                    print('', file=fp)
+                    print('', file=fp)
+
+            # best_opt_execute, CUM_REWARD_case = rl_.rl_excuse_case(hfs.inital_refset, file_name, len(case_CUM_REWARD),
+            #                                                        inital_obj)
+            # best_opt_list.append(best_opt_execute)
+            with open('./MDP.txt', 'a+') as fp:
+                print(best_opt_execute, file=fp)
+                print(file_name, file=fp)
+                print('', file=fp)
+                print('', file=fp)
+
+            # from SS_RL.diagram import job_diagram
+            # import matplotlib.pyplot as plt
+            #
+            # schedule = rl_.env.inital_refset[0][0]
+            # job_execute_time = rl_.env.inital_refset[0][2]
+            # split_list = file_name.split('_')
+            # dia = job_diagram(schedule, job_execute_time, file_name, split_list[0])
+            # dia.pre()
+            # plt.savefig('./img0121/pic-{}.png'.format(file_name))
+
+            end_time = time.time()
+            duration = end_time - start_time
+
+            with open('./text_result_0208.txt', 'a+') as fp:
+                print(file_name, rl_.config.ture_opt, round(sum(best_opt_list) / len(best_opt_list), 2),
+                      round(duration / len(best_opt_list), 2), file=fp)
+
+    except:
+        pass
 
 
 
