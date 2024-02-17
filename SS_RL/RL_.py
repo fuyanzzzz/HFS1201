@@ -278,29 +278,21 @@ class RL_Q():
     def get_state(self,trial, impro_degree, diversity_degree):
         # 根据传入的参数确定转移状态
         # state_space = {}
-        #
-        # if impro_degree >= diversity_degree:
-        #     if trial == 0:
-        #         state = 0
-        #     elif trial > 0 and trial <= 20:
-        #         state = 1
-        #     elif trial > 20 and trial <= 50:
-        #         state = 2
-        #     else:
-        #         state = 3
-        # else:
-        #     if trial == 0:
-        #         state = 4
-        #     elif trial > 0 and trial <= 20:
-        #         state = 5
-        #     elif trial > 20 and trial <= 50:
-        #         state = 6
-        #     else:
-        #         state = 7
-        # if self.trial > 100:
-        #     state = 7
-        # # if trial > 50:
-        # #     state = 8
+
+        if impro_degree >= diversity_degree:
+            if trial == 0:
+                next_state = 0
+            elif trial <= 3:
+                next_state = 1
+            else:
+                next_state = 2
+        else:
+            if trial == 0:
+                next_state = 3
+            elif trial <= 3:
+                next_state = 4
+            else:
+                next_state = 5
 
         '''
         第二种状态设置方式：
@@ -389,52 +381,52 @@ class RL_Q():
         '''
         判断延误目标值和早到目标值
         '''
-        ect_value = 0
-        ddl_value = 0
-        opt_item = self.inital_refset[0]
-        job_execute_time = opt_item[2]
-
-        for job in range(self.config.jobs_num):
-            job_makespan = job_execute_time[(self.config.stages_num - 1, job)]
-            if job_makespan < self.config.ect_windows[job]:  # 早前权重值
-                ect_value += (self.config.ect_windows[job] - job_makespan) * self.config.ect_weight[job]
-            elif job_makespan > self.config.ddl_windows[job]:  # 延误权重值
-                ddl_value += (job_makespan - self.config.ddl_windows[job]) * self.config.ddl_weight[job]
-
-        self.state_space = {}
-        ect_or_ddl = None
-        if ect_value >= ddl_value *3:
-            priority_ = -1
-            ect_or_ddl = 'ect'
-            if self.trial == 0:
-                next_state = 0
-            elif self.trial <=3:
-                next_state = 1
-            else:
-                next_state = 2
-        elif ddl_value >= ect_value *3:
-            priority_ = 1
-            ect_or_ddl = 'ddl'
-            if self.trial == 0:
-                next_state = 3
-            elif self.trial <= 3:
-                next_state = 4
-            else:
-                next_state = 5
-        else:
-            priority_ = 0
-            ect_or_ddl = 'equal'
-            if self.trial == 0:
-                next_state = 6
-            elif self.trial <= 3:
-                next_state = 7
-            else:
-                next_state = 8
-        self.state_space[next_state] = {self.trial, ect_or_ddl}
+        # ect_value = 0
+        # ddl_value = 0
+        # opt_item = self.inital_refset[0]
+        # job_execute_time = opt_item[2]
+        #
+        # for job in range(self.config.jobs_num):
+        #     job_makespan = job_execute_time[(self.config.stages_num - 1, job)]
+        #     if job_makespan < self.config.ect_windows[job]:  # 早前权重值
+        #         ect_value += (self.config.ect_windows[job] - job_makespan) * self.config.ect_weight[job]
+        #     elif job_makespan > self.config.ddl_windows[job]:  # 延误权重值
+        #         ddl_value += (job_makespan - self.config.ddl_windows[job]) * self.config.ddl_weight[job]
+        #
+        # self.state_space = {}
+        # ect_or_ddl = None
+        # if ect_value >= ddl_value *3:
+        #     priority_ = -1
+        #     ect_or_ddl = 'ect'
+        #     if self.trial == 0:
+        #         next_state = 0
+        #     elif self.trial <=3:
+        #         next_state = 1
+        #     else:
+        #         next_state = 2
+        # elif ddl_value >= ect_value *3:
+        #     priority_ = 1
+        #     ect_or_ddl = 'ddl'
+        #     if self.trial == 0:
+        #         next_state = 3
+        #     elif self.trial <= 3:
+        #         next_state = 4
+        #     else:
+        #         next_state = 5
+        # else:
+        #     priority_ = 0
+        #     ect_or_ddl = 'equal'
+        #     if self.trial == 0:
+        #         next_state = 6
+        #     elif self.trial <= 3:
+        #         next_state = 7
+        #     else:
+        #         next_state = 8
+        # self.state_space[next_state] = {self.trial, ect_or_ddl}
 
         return next_state
 
-    def get_reward(self,state,next_state):
+    def get_reward(self,cur_best_opt,impro_degree,diversity_degree):
         # reward = 0
         # if (self.best_opt - cur_best_opt) > 0:
         #     reward = (self.best_opt - cur_best_opt) / self.inital_obj
@@ -448,15 +440,15 @@ class RL_Q():
         # fp.close()
 
 
-        # if self.best_opt == 0:
-        #     impor = (self.best_opt - cur_best_opt) / 1
-        # else:
-        #     impor = (self.best_opt - cur_best_opt) / self.best_opt
-        #
-        # if self.trial == 0:
-        #     reward = math.exp((impor + impro_degree + diversity_degree)/2)
-        # else:
-        #     reward = -math.exp((impro_degree + diversity_degree)/2)
+        if self.best_opt == 0:
+            impor = (self.best_opt - cur_best_opt) / 1
+        else:
+            impor = (self.best_opt - cur_best_opt) / self.best_opt
+
+        if self.trial == 0:
+            reward = math.exp((impor + impro_degree + diversity_degree)/3)
+        else:
+            reward = -math.exp((impro_degree + diversity_degree)/2)
         # if np.isnan(reward):
         #     print(True)
         # if self.trial > 50:
@@ -490,16 +482,16 @@ class RL_Q():
         #
         # reward = update_num
 
-        state_reward = {}
-        for i_item in range(0,9):
-            if i_item <= 2 :
-                state_reward[i_item] = i_item
-            elif i_item <= 5:
-                state_reward[i_item] = i_item - 3
-            else:
-                state_reward[i_item] = i_item - 6
-
-        reward = state_reward[state] - state_reward[next_state]
+        # state_reward = {}
+        # for i_item in range(0,9):
+        #     if i_item <= 2 :
+        #         state_reward[i_item] = i_item
+        #     elif i_item <= 5:
+        #         state_reward[i_item] = i_item - 3
+        #     else:
+        #         state_reward[i_item] = i_item - 6
+        #
+        # reward = state_reward[state] - state_reward[next_state]
 
 
 
@@ -616,7 +608,7 @@ class RL_Q():
                 # 如果更优，则更新相关参数
 
 
-                if update_obj < obj or (update_obj == obj and stage == 0 and search_method_1 == 'effe'):
+                if update_obj < obj:
                     update = True
                     # print(0,update_schedule,update_obj)
                     print('成功更新-----self.obj:{0},self.update_obj:{1}'.format(obj, update_obj))
@@ -739,27 +731,30 @@ class RL_Q():
         cur_best_opt = self.inital_refset[0][1]    # 需要传入的参数
         # impro_mean_obj = self.ori_mean_obj - cur_mean_obj
 
+        if cur_best_opt < self.best_opt:
+            self.trial = 0
+        else:
+            self.trial += 1
 
+        next_state = self.get_state(self.trial, impro_degree, diversity_degree)
+        reward = self.get_reward(cur_best_opt,impro_degree,diversity_degree)
 
 
         if cur_best_opt < self.best_opt:
-            self.trial = 0
             self.best_opt = cur_best_opt
             self.not_opt_iter = 0
 
         else:
-            self.trial += 1
             self.not_opt_iter +=1
 
 
         # 状态转移函数
-        state_name = self.state_space[state]
-        next_state = self.get_state(self.trial, impro_degree, diversity_degree)
-        reward = self.get_reward(state,next_state)
-        next_state_name = self.state_space[next_state]
+        # state_name = self.state_space[state]
+
+        # next_state_name = self.state_space[next_state]
         # if self.file_name == '1236_Instance_20_2_3_0,6_0,2_20_Rep1.txt':
         with open('./MDP.txt', 'a+') as fp:
-            print('s:{0},   r:{2},    a:{1},    s_:{3}'.format(state_name, action_name, reward, next_state_name), file=fp)
+            print('s:{0},   r:{2},    a:{1},    s_:{3}'.format(state, action_name, reward, next_state), file=fp)
 
 
         new_inital_refset = copy.deepcopy(self.inital_refset)
@@ -799,7 +794,7 @@ class RL_Q():
         # for episode in range(MAX_EPISODES):
         step_counter = 0
 
-        S = self.get_state(self.trial, None, None)       # 初始状态为0
+        S = 1      # 初始状态为0
         CUM_REWARD = 0
 
         is_terminated = False
@@ -844,7 +839,7 @@ class RL_Q():
 
     def rl_execute(self):
         step_counter = 0
-        S = self.get_state(self.trial, None, None)  # 初始状态为0
+        S = 1  # 初始状态为0
         CUM_REWARD = 0
 
         self.max_iter = 0
