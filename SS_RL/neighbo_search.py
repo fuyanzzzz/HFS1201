@@ -855,10 +855,10 @@ class Neighbo_Search():
         else:
             self.update_obj = obj
 
-
-        # 这里调用那个函数：
-        self.sort_stage0()
-        self.re_cal(self.update_schedule)
+        if stage == 1:
+            # 这里调用那个函数：
+            self.sort_stage0()
+            self.re_cal(self.update_schedule)
 
         # 更新目标值
         self.update_obj = self.schedule_ins.cal(self.update_job_execute_time)

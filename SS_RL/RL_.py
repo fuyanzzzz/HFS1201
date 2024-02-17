@@ -90,7 +90,8 @@ class RL_Q():
         'dire_insert_same_dweight_1', 'dire_insert_other_dweight_1',
         'dire_insert_same_eweight_1', 'dire_insert_other_eweight_1',
         'effe_insert_same_DRM_1', 'effe_swap_same_DRM_1', 'effe_insert_other_DRM_1', 'effe_swap_other_DRM_1',
-        'effe_insert_same_ERM_1', 'effe_swap_same_ERM_1', 'effe_insert_other_ERM_1', 'effe_swap_other_ERM_1']
+        'effe_insert_same_ERM_1', 'effe_swap_same_ERM_1', 'effe_insert_other_ERM_1', 'effe_swap_other_ERM_1',
+                               'effe_insert_same_stuck_0','effe_swap_same_stuck_0','effe_insert_other_stuck_0','effe_swap_other_stuck_0']
 
         for i_action in self.action_space_1:
             self.use_actions[i_action] =[0, 0, 0]
@@ -195,23 +196,43 @@ class RL_Q():
         # self.action_space[14] = ['rand_insert_same_R_1','rand_swap_same_R_1']
         # self.action_space[7] = ['rand_insert_other_R_1', 'rand_swap_other_R_1']
 
-        # 以延误为单位的insert，
-        self.action_space[0] = ['dire_insert_same_dweight_1', 'dire_insert_other_dweight_1', 'effe_insert_same_DRM_1',
-                                'effe_insert_other_DRM_1']
+        # # 以延误为单位的insert，
+        # self.action_space[0] = ['dire_insert_same_dweight_1', 'dire_insert_other_dweight_1', 'effe_insert_same_DRM_1',
+        #                         'effe_insert_other_DRM_1']
+        #
+        # # 以延误为单位的swap
+        # self.action_space[1] = ['effe_swap_same_DRM_1', 'effe_swap_other_DRM_1']
+        # # 以早到为单位的insert
+        # self.action_space[2] = ['dire_insert_same_eweight_1', 'dire_insert_other_eweight_1', 'effe_insert_same_ERM_1',
+        #                         'effe_insert_other_ERM_1']
+        # # 以早到为单位的sawp
+        # self.action_space[3] = ['effe_swap_same_ERM_1', 'effe_swap_other_ERM_1']
+        # # 以卡住为单位，移动第一阶段
+        #
+        # # 完全随机工件 insert
+        # self.action_space[4] = ['rand_insert_other_M_1', 'rand_insert_same_M_1']
+        # # 完全随机工件 swap
+        # self.action_space[5] = ['rand_swap_other_M_1', 'rand_swap_same_M_1']
+        #
+        # self.action_space[0] = ['effe_insert_same_stuck_0','effe_swap_same_stuck_0']
+        # self.action_space[1] = ['effe_insert_other_stuck_0','effef_swap_other_stuck_0']
+
+        # # 以延误为单位的insert，
+        self.action_space[0] = [ 'effe_insert_same_DRM_1','effe_insert_other_DRM_1','effe_swap_same_DRM_1', 'effe_swap_other_DRM_1']
 
         # 以延误为单位的swap
-        self.action_space[1] = ['effe_swap_same_DRM_1', 'effe_swap_other_DRM_1']
+        self.action_space[1] = ['dire_insert_same_dweight_1', 'dire_insert_other_dweight_1',]
         # 以早到为单位的insert
-        self.action_space[2] = ['dire_insert_same_eweight_1', 'dire_insert_other_eweight_1', 'effe_insert_same_ERM_1',
-                                'effe_insert_other_ERM_1']
+        self.action_space[2] = [ 'effe_insert_same_ERM_1','effe_insert_other_ERM_1','effe_swap_same_ERM_1', 'effe_swap_other_ERM_1']
         # 以早到为单位的sawp
-        self.action_space[3] = ['effe_swap_same_ERM_1', 'effe_swap_other_ERM_1']
+        self.action_space[3] = ['dire_insert_same_eweight_1', 'dire_insert_other_eweight_1',]
         # 以卡住为单位，移动第一阶段
 
         # 完全随机工件 insert
-        self.action_space[4] = ['rand_insert_other_M_1', 'rand_insert_same_M_1']
+        self.action_space[4] = ['rand_insert_other_M_1', 'rand_insert_same_M_1','rand_swap_other_M_1', 'rand_swap_same_M_1']
         # 完全随机工件 swap
-        self.action_space[5] = ['rand_swap_other_M_1', 'rand_swap_same_M_1']
+        self.action_space[5] = ['effe_insert_same_stuck_0','effe_swap_same_stuck_0','effe_insert_other_stuck_0','effe_swap_other_stuck_0']
+
 
 
 
@@ -230,27 +251,27 @@ class RL_Q():
         # else:
         #     action_name = state_table.idxmax()
 
-        if (np.random.uniform() > EPSILON) or ((state_table == 0).all()) or self.iter_index < 5:
-            action_name = np.random.choice(range(len(self.action_space)))
-        else:
-            new_list = state_table
-            min_value = min(new_list)
-            if min_value <0:
-                for i in range(len(new_list)):
-                    new_list[i] += -min_value
-
-
-            total_weight = sum(new_list)
-            cumulative_weights = [sum(new_list[:i + 1]) for i in range(len(new_list))]  # 计算累积权重
-            rand_val = random.uniform(0, total_weight)  # 生成一个随机值
-
-            # 根据随机值选择元素
-            for item, cumulative_weight in zip(range(len(new_list)), cumulative_weights):
-                if rand_val <= cumulative_weight:
-                    action_name = item
-                    break
-            # action_name = state_table.idxmax()
-        # action_name = np.random.choice(range(len(self.action_space)))
+        # if ((state_table == 0).all()) or self.iter_index < 15:
+        #     action_name = np.random.choice(range(len(self.action_space)))
+        # else:
+        #     new_list = state_table
+        #     min_value = min(new_list)
+        #     if min_value <0:
+        #         for i in range(len(new_list)):
+        #             new_list[i] += -min_value
+        #
+        #
+        #     total_weight = sum(new_list)
+        #     cumulative_weights = [sum(new_list[:i + 1]) for i in range(len(new_list))]  # 计算累积权重
+        #     rand_val = random.uniform(0, total_weight)  # 生成一个随机值
+        #
+        #     # 根据随机值选择元素
+        #     for item, cumulative_weight in zip(range(len(new_list)), cumulative_weights):
+        #         if rand_val <= cumulative_weight:
+        #             action_name = item
+        #             break
+        # action_name = state_table.idxmax()
+        action_name = np.random.choice(range(len(self.action_space)))
         return action_name
 
 
@@ -382,7 +403,7 @@ class RL_Q():
 
         self.state_space = {}
         ect_or_ddl = None
-        if ect_value >= ddl_value *2:
+        if ect_value >= ddl_value *3:
             priority_ = -1
             ect_or_ddl = 'ect'
             if self.trial == 0:
@@ -391,7 +412,7 @@ class RL_Q():
                 next_state = 1
             else:
                 next_state = 2
-        elif ddl_value >= ect_value *2:
+        elif ddl_value >= ect_value *3:
             priority_ = 1
             ect_or_ddl = 'ddl'
             if self.trial == 0:
