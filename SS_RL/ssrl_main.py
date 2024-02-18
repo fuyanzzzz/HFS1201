@@ -34,8 +34,11 @@ pd.reset_option('display.max_rows')
 pd.reset_option('display.max_columns')
 
 # q_table = pd.DataFrame(np.random.rand(12, 11),columns=actions)
+# q_table = pd.DataFrame(
+#             np.zeros((N_STATES, len(actions))),columns=actions)
+
 q_table = pd.DataFrame(
-            np.zeros((N_STATES, len(actions))),columns=actions)
+            np.random.uniform(low=0, high=1, size=(N_STATES, len(actions))),columns=actions)
 
 data_folder = "data"  # 数据文件夹的路径
 # 获取data文件夹下所有的文件名
@@ -46,13 +49,13 @@ action_space = ['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswa
 for i_action in action_space:
     use_action_dict[i_action] = [0,0]
 
-train = False
-text = True
+train = True
+text = False
 
 
 
-stop_iter_list = [20,30,50,100]
-# stop_iter_list = [20]
+# stop_iter_list = [20,30,50,100]
+stop_iter_list = [20]
 txt_files = [f for f in os.listdir(data_folder) if f.endswith(".txt")]
 iter = 0
 # while True:
@@ -242,9 +245,9 @@ if train is True:
                 # 调整子图之间的垂直间距
                 plt.tight_layout()
                 # plt.pause(0.1)  # 用于动态展示图像
-                plt.savefig('./img0208_{}/pic-{}.png'.format(i_stop_iter,len(CUM_REWARD)))
+                plt.savefig('./img0218_{}/pic-{}.png'.format(i_stop_iter,len(CUM_REWARD)))
 
-                with open('./0208_q_{}.txt'.format(i_stop_iter), 'a+') as fp:
+                with open('./0218_q_{}.txt'.format(i_stop_iter), 'a+') as fp:
                     # 设置显示选项
                     pd.set_option('display.max_rows', None)
                     pd.set_option('display.max_columns', None)

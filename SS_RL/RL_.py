@@ -434,7 +434,7 @@ class RL_Q():
 
         return next_state
 
-    def get_reward(self,state,next_state):
+    def get_reward(self,cur_best_opt,impro_degree, diversity_degree):
         # reward = 0
         # if (self.best_opt - cur_best_opt) > 0:
         #     reward = (self.best_opt - cur_best_opt) / self.inital_obj
@@ -448,15 +448,17 @@ class RL_Q():
         # fp.close()
 
 
-        # if self.best_opt == 0:
-        #     impor = (self.best_opt - cur_best_opt) / 1
-        # else:
-        #     impor = (self.best_opt - cur_best_opt) / self.best_opt
-        #
-        # if self.trial == 0:
-        #     reward = math.exp((impor + impro_degree + diversity_degree)/2)
-        # else:
-        #     reward = -math.exp((impro_degree + diversity_degree)/2)
+        if self.best_opt == 0:
+            impor = (self.best_opt - cur_best_opt) / 1
+        else:
+            impor = (self.best_opt - cur_best_opt) / self.best_opt
+
+        if self.trial == 0:
+            reward = math.exp((impor + impro_degree)/2)
+            # reward = 1
+        else:
+            reward = -math.exp((impro_degree)/1)
+            # reward = -1
         # if np.isnan(reward):
         #     print(True)
         # if self.trial > 50:
@@ -490,16 +492,16 @@ class RL_Q():
         #
         # reward = update_num
 
-        state_reward = {}
-        for i_item in range(0,9):
-            if i_item <= 2 :
-                state_reward[i_item] = i_item
-            elif i_item <= 5:
-                state_reward[i_item] = i_item - 3
-            else:
-                state_reward[i_item] = i_item - 6
-
-        reward = state_reward[state] - state_reward[next_state]
+        # state_reward = {}
+        # for i_item in range(0,9):
+        #     if i_item <= 2 :
+        #         state_reward[i_item] = i_item
+        #     elif i_item <= 5:
+        #         state_reward[i_item] = i_item - 3
+        #     else:
+        #         state_reward[i_item] = i_item - 6
+        #
+        # reward = state_reward[state] - state_reward[next_state]
 
 
 
@@ -739,27 +741,30 @@ class RL_Q():
         cur_best_opt = self.inital_refset[0][1]    # 需要传入的参数
         # impro_mean_obj = self.ori_mean_obj - cur_mean_obj
 
-
-
-
         if cur_best_opt < self.best_opt:
             self.trial = 0
+        else:
+            self.trial += 1
+
+        next_state = self.get_state(self.trial, impro_degree, diversity_degree)
+        reward = self.get_reward(cur_best_opt,impro_degree, diversity_degree)
+
+        if cur_best_opt < self.best_opt:
             self.best_opt = cur_best_opt
             self.not_opt_iter = 0
 
         else:
-            self.trial += 1
+
             self.not_opt_iter +=1
 
 
         # 状态转移函数
-        state_name = self.state_space[state]
-        next_state = self.get_state(self.trial, impro_degree, diversity_degree)
-        reward = self.get_reward(state,next_state)
-        next_state_name = self.state_space[next_state]
+        # state_name = self.state_space[state]
+
+        # next_state_name = self.state_space[next_state]
         # if self.file_name == '1236_Instance_20_2_3_0,6_0,2_20_Rep1.txt':
         with open('./MDP.txt', 'a+') as fp:
-            print('s:{0},   r:{2},    a:{1},    s_:{3}'.format(state_name, action_name, reward, next_state_name), file=fp)
+            print('s:{0},   r:{2},    a:{1},    s_:{3}'.format(state, action_name, reward, next_state), file=fp)
 
 
         new_inital_refset = copy.deepcopy(self.inital_refset)
