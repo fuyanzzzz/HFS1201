@@ -73,6 +73,7 @@ class RL_Q():
         self.iter_index = iter
         self.not_opt_iter = 0
         self.stop_iter = stop_iter
+        self.population = self.config.jobs_num *2
 
 
         '''
@@ -275,24 +276,23 @@ class RL_Q():
         return action_name
 
 
-    def get_state(self,trial, impro_degree, diversity_degree):
+    def get_state(self,old_inital_refset):
         # 根据传入的参数确定转移状态
         # state_space = {}
 
-        if impro_degree >= diversity_degree:
-            if trial == 0:
-                next_state = 0
-            elif trial <= 3:
-                next_state = 1
-            else:
-                next_state = 2
-        else:
-            if trial == 0:
-                next_state = 3
-            elif trial <= 3:
-                next_state = 4
-            else:
-                next_state = 5
+        # ect_value = 0
+        # ddl_value = 0
+        # opt_item = self.inital_refset[0]
+        # job_execute_time = opt_item[2]
+        #
+        # for job in range(self.config.jobs_num):
+        #     job_makespan = job_execute_time[(self.config.stages_num - 1, job)]
+        #     if job_makespan < self.config.ect_windows[job]:  # 早前权重值
+        #         ect_value += (self.config.ect_windows[job] - job_makespan) * self.config.ect_weight[job]
+        #     elif job_makespan > self.config.ddl_windows[job]:  # 延误权重值
+        #         ddl_value += (job_makespan - self.config.ddl_windows[job]) * self.config.ddl_weight[job]
+
+
 
         '''
         第二种状态设置方式：
@@ -393,40 +393,91 @@ class RL_Q():
         #     elif job_makespan > self.config.ddl_windows[job]:  # 延误权重值
         #         ddl_value += (job_makespan - self.config.ddl_windows[job]) * self.config.ddl_weight[job]
         #
-        # self.state_space = {}
+        self.state_space = {}
         # ect_or_ddl = None
-        # if ect_value >= ddl_value *3:
-        #     priority_ = -1
-        #     ect_or_ddl = 'ect'
-        #     if self.trial == 0:
-        #         next_state = 0
-        #     elif self.trial <=3:
-        #         next_state = 1
-        #     else:
-        #         next_state = 2
-        # elif ddl_value >= ect_value *3:
-        #     priority_ = 1
-        #     ect_or_ddl = 'ddl'
-        #     if self.trial == 0:
-        #         next_state = 3
-        #     elif self.trial <= 3:
-        #         next_state = 4
-        #     else:
-        #         next_state = 5
-        # else:
-        #     priority_ = 0
-        #     ect_or_ddl = 'equal'
-        #     if self.trial == 0:
-        #         next_state = 6
-        #     elif self.trial <= 3:
-        #         next_state = 7
-        #     else:
-        #         next_state = 8
+
+        new_delay_early = []
+        for i in range(self.population / 5):
+            for i_item in self.inital_refset:
+                ect_value = 0
+                ddl_value = 0
+                opt_item = i_item
+                job_execute_time = opt_item[2]
+
+                for job in range(self.config.jobs_num):
+                    job_makespan = job_execute_time[(self.config.stages_num - 1, job)]
+                    if job_makespan < self.config.ect_windows[job]:  # 早前权重值
+                        ect_value += (self.config.ect_windows[job] - job_makespan) * self.config.ect_weight[job]
+                    elif job_makespan > self.config.ddl_windows[job]:  # 延误权重值
+                        ddl_value += (job_makespan - self.config.ddl_windows[job]) * self.config.ddl_weight[job]
+
+                new_delay_early.append((ddl_value,ect_value))
+
+        old_delay_early = []
+        for i in range(self.population / 5):
+            for i_item in old_inital_refset:
+                ect_value = 0
+                ddl_value = 0
+                opt_item = i_item
+                job_execute_time = opt_item[2]
+
+                for job in range(self.config.jobs_num):
+                    job_makespan = job_execute_time[(self.config.stages_num - 1, job)]
+                    if job_makespan < self.config.ect_windows[job]:  # 早前权重值
+                        ect_value += (self.config.ect_windows[job] - job_makespan) * self.config.ect_weight[job]
+                    elif job_makespan > self.config.ddl_windows[job]:  # 延误权重值
+                        ddl_value += (job_makespan - self.config.ddl_windows[job]) * self.config.ddl_weight[job]
+
+                old_delay_early.append((ddl_value,ect_value))
+
+        sum_delay_change = 0
+        sum_early_change = 0
+        for i in range(len(old_delay_early)):
+            sum_delay_change += old_delay_early[i][0] - new_delay_early[i][0]
+            sum_early_change += old_delay_early[i][1] - new_delay_early[i][1]
+
+        average_delay_change = sum_delay_change / len(old_delay_early)
+        average_early_change = sum_early_change / len(old_delay_early)
+
+
+
+        if self.trial == 0:
+            if average_delay_change > 0 and average_early_change > 0:
+                next_state = 0
+            elif average_delay_change > 0 and average_early_change <= 0:
+                next_state = 1
+            elif average_delay_change <= 0 and average_early_change > 0:
+                next_state = 2
+            else:
+                next_state = 3
+
+        elif self.trial <= 10:
+            if average_delay_change > 0 and average_early_change > 0:
+                next_state = 4
+            elif average_delay_change > 0 and average_early_change <= 0:
+                next_state = 5
+            elif average_delay_change <= 0 and average_early_change > 0:
+                next_state = 6
+            else:
+                next_state = 7
+
+
+        else:
+            if average_delay_change > 0 and average_early_change > 0:
+                next_state = 8
+            elif average_delay_change > 0 and average_early_change <= 0:
+                next_state = 9
+            elif average_delay_change <= 0 and average_early_change > 0:
+                next_state = 10
+            else:
+                next_state = 11
+
+
         # self.state_space[next_state] = {self.trial, ect_or_ddl}
 
         return next_state
 
-    def get_reward(self,cur_best_opt,impro_degree,diversity_degree):
+    def get_reward(self,cur_best_opt,state,next_state):
         # reward = 0
         # if (self.best_opt - cur_best_opt) > 0:
         #     reward = (self.best_opt - cur_best_opt) / self.inital_obj
@@ -440,15 +491,15 @@ class RL_Q():
         # fp.close()
 
 
-        if self.best_opt == 0:
-            impor = (self.best_opt - cur_best_opt) / 1
-        else:
-            impor = (self.best_opt - cur_best_opt) / self.best_opt
-
-        if self.trial == 0:
-            reward = math.exp((impor + impro_degree + diversity_degree)/3)
-        else:
-            reward = -math.exp((impro_degree + diversity_degree)/2)
+        # if self.best_opt == 0:
+        #     impor = (self.best_opt - cur_best_opt) / 1
+        # else:
+        #     impor = (self.best_opt - cur_best_opt) / self.best_opt
+        #
+        # if self.trial == 0:
+        #     reward = math.exp((impor + impro_degree + diversity_degree)/3)
+        # else:
+        #     reward = -math.exp((impro_degree + diversity_degree)/2)
         # if np.isnan(reward):
         #     print(True)
         # if self.trial > 50:
@@ -482,16 +533,28 @@ class RL_Q():
         #
         # reward = update_num
 
-        # state_reward = {}
-        # for i_item in range(0,9):
-        #     if i_item <= 2 :
-        #         state_reward[i_item] = i_item
-        #     elif i_item <= 5:
-        #         state_reward[i_item] = i_item - 3
-        #     else:
-        #         state_reward[i_item] = i_item - 6
-        #
-        # reward = state_reward[state] - state_reward[next_state]
+        if state in [0,1,2,3] and next_state in [4,5,6,7]:
+            reward = -1
+        elif state in [4,5,6,7] and next_state in [8,9,10,11]:
+            reward = -1
+        elif state in [4,5,6,7] and next_state in [0,1,2,3]:
+            reward = 1
+        elif state in [8,9,10,11] and next_state in [0,1,2,3]:
+            reward = 2
+        elif state == 11 and next_state in [8,9,10]:
+            reward = 1
+        elif state == 11 and next_state in [8,9,10]:
+            reward = 1
+        elif state == 7 and next_state in [4,5,6]:
+            reward = 1
+        elif state == 3 and next_state in [0,1,2]:
+            reward = 1
+        elif state in [0,1,2,3] and next_state in [0,1,2,3]:
+            reward = 1
+        else:
+            reward = 0
+
+
 
 
 
@@ -736,8 +799,8 @@ class RL_Q():
         else:
             self.trial += 1
 
-        next_state = self.get_state(self.trial, impro_degree, diversity_degree)
-        reward = self.get_reward(cur_best_opt,impro_degree,diversity_degree)
+        next_state = self.get_state(old_inital_refset)
+        reward = self.get_reward(cur_best_opt,state,next_state)
 
 
         if cur_best_opt < self.best_opt:
@@ -764,19 +827,22 @@ class RL_Q():
 
         if self.trial > 7:
             self.max_iter += 1
-            self.trial = 0
-            for index in range(int(len(self.inital_refset) / 2)):
-                schedule_1 = self.inital_refset[index][0]
-                schedule_2 = self.inital_refset[int((len(self.inital_refset) / 2))+index][0]
+            jinying_i = 0
+            for index in range(4*self.population/5):
+                if jinying_i >= self.population/5:
+                    jinying_i = 0
+                schedule_1 = self.inital_refset[jinying_i][0]
+                schedule_2 = self.inital_refset[index][0]
                 sort_schedule = self.refer(schedule_1,schedule_2)
                 neig_search = neighbo_search.Neighbo_Search(sort_schedule, None, None,self.file_name)
                 neig_search.re_cal(sort_schedule)
                 self.schedule_ins = Schedule_Instance(sort_schedule, neig_search.update_job_execute_time, self.file_name)
                 new_obj = self.schedule_ins.cal(neig_search.update_job_execute_time)
 
-                new_inital_refset[int((len(self.inital_refset) / 2)) + index] =  \
+                new_inital_refset[index] =  \
                     [copy.deepcopy(sort_schedule), copy.deepcopy(new_obj), copy.deepcopy(neig_search.update_job_execute_time)]
                 # new_inital_refset.append([copy.deepcopy(sort_schedule), copy.deepcopy(new_obj), copy.deepcopy(neig_search.update_job_execute_time)])
+                jinying_i += 1
 
             self.inital_refset = copy.deepcopy(new_inital_refset)
             # self.inital_refset = self.inital_refset[:10] + new_inital_refset

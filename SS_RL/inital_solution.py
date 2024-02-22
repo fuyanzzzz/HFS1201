@@ -44,6 +44,7 @@ class HFS():
         self.inital_refset = []
         self.intal_variable()
         self.schedule_job_block = {}
+        self.population = self.config.jobs_num * 2
 
 
     def gen_jobs_sort(self, gen_method, seed=None):
@@ -347,17 +348,17 @@ class HFS():
                 self.inital_refset.append((
                     self.schedule, self.obj, self.job_execute_time, self.schedule_job_block))
         self.inital_refset = sorted(self.inital_refset, key=lambda x: x[1])
-        self.inital_refset = self.inital_refset[:10]
+        self.inital_refset = self.inital_refset[:self.population/5]
         # self.inital_refset['opt_solu'] = self.inital_refset['opt_solu'][:2]
 
         # 随机解
         gen_method_1 = 'random'
-        for i in range(4):
+        for i in range(self.population/5):
             for gen_method_2 in self.jobs_sort_method_second:
                 self.job_assignment(gen_method_1, gen_method_2, seed_num=i)
                 # 存储schedule，obj
                 self.inital_refset.append(
                     (self.schedule, self.obj, self.job_execute_time, self.schedule_job_block))
         self.inital_refset = sorted(self.inital_refset, key=lambda x: x[1])
-        self.inital_refset = self.inital_refset[:20]
+        self.inital_refset = self.inital_refset[:self.population]
         # self.inital_refset['multi_solu'] = self.inital_refset['multi_solu'][:]

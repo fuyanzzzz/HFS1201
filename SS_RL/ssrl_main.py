@@ -23,7 +23,7 @@ from SS_RL.inital_solution import HFS
 import matplotlib.pyplot as plt
 
 
-N_STATES = 6
+N_STATES = 12
 ACTIONS = ['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswap0','effeswap1','randswap0','randswap1']
 # 1. 生成初始解，这个没有问题
 actions = range(6)
