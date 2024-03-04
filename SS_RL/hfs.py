@@ -6,59 +6,17 @@ Create Time: 2023/2/10 15:45
 -------------------------------------------------
 '''
 import time
-
+import os
 import torch
 import numpy as np
 import random
 import copy
-
-#　读取数据
-i = 0
-job_process_time=np.loadtxt("{0}_Instance_10_2_2_0,2_0,2_10_Rep{0}.txt".format(i,i),skiprows=2,max_rows=10,usecols = (1,3),unpack=True,dtype=int)
-ect_delay_wight = np.loadtxt("{0}_Instance_10_2_2_0,2_0,2_10_Rep{0}.txt".format(i,i),skiprows=14,max_rows=10,usecols = (2,3),unpack=True,dtype=int)
-ect_weight = ect_delay_wight[0]
-ddl_weight = ect_delay_wight[1]
-due_date_windows = np.loadtxt("{0}_Instance_10_2_2_0,2_0,2_10_Rep{0}.txt".format(i,i),skiprows=25,max_rows=10,dtype=int)
-ddl_windows = [i[1] for i in due_date_windows]
-ect_windows = [i[0] for i in due_date_windows]
-
-setup_time = {}
-# setup_time[0] = np.loadtxt("{0}_Instance_10_2_2_0,2_0,2_10_Rep{0}.txt".format(i,i),skiprows=37,max_rows=10,dtype=int)
-# setup_time[1] = np.loadtxt("{0}_Instance_10_2_2_0,2_0,2_10_Rep{0}.txt".format(i,i),skiprows=48,max_rows=10,dtype=int)
-
-setup_time[0] = np.zeros((10,10))
-setup_time[1] = np.zeros((10,10))
-
-jobs_num = int(np.loadtxt("{0}_Instance_10_2_2_0,2_0,2_10_Rep{0}.txt".format(i,i),skiprows=1,max_rows=1,usecols = (0),dtype=int))
-jobs = list(range(jobs_num))
-
-stages_num =  np.loadtxt("{0}_Instance_10_2_2_0,2_0,2_10_Rep{0}.txt".format(i,i),skiprows=1,max_rows=1,usecols = (2),dtype=int)
-total_mahcine_num = np.loadtxt("{0}_Instance_10_2_2_0,2_0,2_10_Rep{0}.txt".format(i,i),skiprows=1,max_rows=1,usecols = (1),dtype=int)
-machine_num_on_stage = []
-for job in range(stages_num):
-    machine_num_on_stage.append(int(total_mahcine_num / stages_num))
-
-#　声明schedule的字典变量
-schedule = {}
-for stage in range(stages_num):
-    for machine in range(machine_num_on_stage[stage]):
-        schedule[(stage,machine)] = []
+from SS_RL.public import AllConfig
 
 
-# 声明一个空的每个工件的完工时间
-machine_completion_time = {}
-for stage in range(stages_num):
-    for machine in range(machine_num_on_stage[stage]):
-        machine_completion_time[(stage, machine)] = [-1, -1]
 
-# 声明一个阶段的完工时间的字典
-job_completion_time = {}
-for stage in range(stages_num):
-    job_completion_time[stage] = np.zeros(jobs_num,dtype=int)
-# job_completion_time = np.zeros((stages_num, jobs_num), dtype=int)
-
-# 声明一个变量，用于存储每个阶段的工件调度顺序【用于第二阶段的local search】
-job_sort_on_satges = {}
+data_folder = "data"  # 数据文件夹的路径
+txt_files = [f for f in os.listdir(data_folder) if f.endswith(".txt")]
 
 
 
@@ -129,7 +87,7 @@ def intal_variable():
     return schedule,machine_completion_time,job_completion_time
 
 
-def job_assignment(job_sort,start_stage = 0,end_stage = stages_num,job_sort_on_stages = None):
+def job_assignment(job_sort,start_stage = 0,end_stage = 2,job_sort_on_stages = None):
     '''
     传入的参数：6个
     1. 第一阶段的工件加工顺序
@@ -427,9 +385,9 @@ def idle_time_insertion(schedule):
             delay_job.clear()
             on_time_job.clear()
             for job in job_block:
-                if job_makespan[job] < due_date_windows[job][0]:
+                if job_makespan[job] < ect_windows[job]:
                     early_job.append(job)
-                elif job_makespan[job] >= due_date_windows[job][1]:
+                elif job_makespan[job] >= ddl_windows[job]:
                     delay_job.append(job)
                 else:
                     on_time_job.append(job)
@@ -602,49 +560,108 @@ def limited_local_search(job_sort,best_obj,best_schedule):
             best_schedule, job_completion_time, machine_completion_time, current_obj = job_assignment(job_sort_on_stages,end_stage=stage+1)
             job_sort = np.argsort(job_completion_time[stage])
             job_sort_on_stages[stage] = job_sort
-    cur_obj, all_job_block = idle_time_insertion(schedule)  # 每进行一次重构，也需要进行空闲插入程序
+    cur_obj, all_job_block = idle_time_insertion(best_schedule)  # 每进行一次重构，也需要进行空闲插入程序
 
-    return schedule,cur_obj
+    return best_schedule,cur_obj
 
 
 
 if __name__ == '__main__':
     # 初始解
-    t1 = time.time()
-    history_schedule = []
-    history_obj = []
 
-    # 生成初始解
-    inital_schedule,intal_obj,job_sort_inital= inintal_solution()
-    # 解构，划分出两个移除工件序列，剩余工件序列
-    d_list = [1,2,3,4]   #  初始解d_list 列表
-    i = 0
-    ts = None
-    total_time = 0
-    while total_time <= 0.6:
-        print('解构重构')
-        # 解构重构: 这里只对第一阶段上的工件排序进行调整
-        jobs_sort,recon_schedule,recon_obj = destruction_reconstruction(job_sort_inital,d_list)
-        # local search：这里也是只对第一阶段的工件排序进行调整
-        print('local search')
-        local_schedule,local_obj,jobs_sort = local_search(jobs_sort,recon_obj,recon_schedule)
-        # 第二阶段的local search：这里会对其他阶段的工件排序造成影响
-        print('第二阶段local search')
-        schedule,obj = limited_local_search(jobs_sort,local_obj,local_schedule)     # 目标值输出
-        print('目标值：{0}'.format(local_obj))
-        # 接受标准
-        print('接受标准')
-        job_sort_inital,ts,cur_obj,history_obj,history_schedule = acceptance_criterion(jobs_sort,local_obj,ts)
-        i += 1
-        t2 = time.time()
-        total_time = t2 - t1
-        print(total_time)
-        print(i)
+    for index, file_name in enumerate(txt_files):
+        config = AllConfig.get_config(file_name)
+        job_process_time = config.job_process_time
+        ect_weight = config.ect_weight
+        ddl_weight = config.ddl_weight
+        ddl_windows = config.ddl_windows
+        ect_windows = config.ect_windows
+        jobs_num = config.jobs_num
+        jobs = list(range(jobs_num))
+        stages_num = config.stages_num
+        total_mahcine_num = config.total_mahcine_num
 
-    best_obj = min(history_obj)
-    index = history_obj.index(best_obj)
-    best_schedule = history_schedule[index]
-    print('best_obj:{0}'.format(best_obj))
+        setup_time = {}
+
+        setup_time[0] = np.zeros((10, 10))
+        setup_time[1] = np.zeros((10, 10))
+
+        machine_num_on_stage = []
+        for job in range(stages_num):
+            machine_num_on_stage.append(int(total_mahcine_num / stages_num))
+
+        # 　声明schedule的字典变量
+        schedule = {}
+        for stage in range(stages_num):
+            for machine in range(machine_num_on_stage[stage]):
+                schedule[(stage, machine)] = []
+
+        # 声明一个空的每个工件的完工时间
+        machine_completion_time = {}
+        for stage in range(stages_num):
+            for machine in range(machine_num_on_stage[stage]):
+                machine_completion_time[(stage, machine)] = [-1, -1]
+
+        # 声明一个阶段的完工时间的字典
+        job_completion_time = {}
+        for stage in range(stages_num):
+            job_completion_time[stage] = np.zeros(jobs_num, dtype=int)
+        # job_completion_time = np.zeros((stages_num, jobs_num), dtype=int)
+
+        # 声明一个变量，用于存储每个阶段的工件调度顺序【用于第二阶段的local search】
+        job_sort_on_satges = {}
+
+        '''
+        以上是变量初始化和声明
+        '''
+
+        t1 = time.time()
+        history_schedule = []
+        history_obj = []
+
+        # 生成初始解
+        inital_schedule,intal_obj,job_sort_inital= inintal_solution()
+        # 解构，划分出两个移除工件序列，剩余工件序列
+        d_list = [1,2,3,4]   #  初始解d_list 列表
+        i = 0
+        ts = None
+        total_time = 0
+        while total_time <= 0.6:
+            print('解构重构')
+            # 解构重构: 这里只对第一阶段上的工件排序进行调整
+            jobs_sort,recon_schedule,recon_obj = destruction_reconstruction(job_sort_inital,d_list)
+            # local search：这里也是只对第一阶段的工件排序进行调整
+            print('local search')
+            local_schedule,local_obj,jobs_sort = local_search(jobs_sort,recon_obj,recon_schedule)
+            # 第二阶段的local search：这里会对其他阶段的工件排序造成影响
+            print('第二阶段local search')
+            schedule,obj = limited_local_search(jobs_sort,local_obj,local_schedule)     # 目标值输出
+            print('目标值：{0}'.format(local_obj))
+            # 接受标准
+            print('接受标准')
+            job_sort_inital,ts,cur_obj,history_obj,history_schedule = acceptance_criterion(jobs_sort,local_obj,ts)
+            i += 1
+            t2 = time.time()
+            total_time = t2 - t1
+            print(total_time)
+            print(i)
+
+        best_obj = min(history_obj)
+        index = history_obj.index(best_obj)
+        best_schedule = history_schedule[index]
+        print(best_schedule)
+        schedule, job_completion_time, machine_completion_time, current_obj = job_assignment(best_schedule)
+        improve_obj, all_job_block = idle_time_insertion(schedule)
+        print('best_obj:{0}'.format(best_obj))
+
+
+
+        from SS_RL.diagram import job_diagram
+        import matplotlib.pyplot as plt
+
+        dia = job_diagram(schedule, job_execute_time, file_name, len(txt_files) * iter + index)
+        dia.pre()
+        plt.savefig('./img1203/pic-{}.png'.format(len(txt_files) * iter + index))
 
 
 
