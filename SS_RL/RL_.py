@@ -38,8 +38,8 @@ ACTIONS =['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswap0','e
 action_set = ['effeinsert0','effeinsert1','randinsert0','randinsert1','effeswap0','effeswap1','randswap0','randswap1']
 EPSILON = 0.9
 # ALPHA = 0.1
-ALPHA = 0.1
-GAMMA = 0.9
+# ALPHA = 0.01
+# GAMMA = 0.9
 MAX_EPISODES = 15
 FRESH_TIME = 0.3
 TerminalFlag = "terminal"
@@ -48,20 +48,23 @@ TerminalFlag = "terminal"
 
 
 class RL_Q():
-    def __init__(self,n_states,n_actions,inital_refset,q_table,file_name,iter,stop_iter):
+    def __init__(self,n_states,n_actions,inital_refset,q_table,file_name,iter,stop_iter,a,i_trial,lr,jingying,discount_rate):
 
         self.trial = 0
         self.ori_mean_obj = 9999999
 
         self.best_schedule = None
         self.inital_refset = inital_refset
-        self.ini = inital_solution.HFS(file_name)
+        self.config = AllConfig.get_config(file_name)
+        self.population = self.config.jobs_num *2
+        self.jingying_num = int(self.population * jingying)
+        self.ini = inital_solution.HFS(file_name,self.jingying_num)
         self.inital_refset = sorted(self.inital_refset, key=lambda x: x[1])
         self.inital_obj = self.inital_refset[0][1]
         self.best_opt = self.inital_obj
         self.file_name = file_name
         self.max_iter = 0
-        self.config = AllConfig.get_config(file_name)
+
 
         self.gen_action_space()
         # self.q_table = self.build_q_table(n_states,range(7))
@@ -73,8 +76,15 @@ class RL_Q():
         self.iter_index = iter
         self.not_opt_iter = 0
         self.stop_iter = stop_iter
-        self.population = self.config.jobs_num *2
 
+        self.from_now = 0
+        self.delay_early = []
+        self.update_jingying = 0
+        self.a = a
+        self.i_trial = i_trial
+        self.GAMMA = discount_rate
+        self.jingying_num = int(self.population* jingying)
+        self.ALPHA = lr
 
         '''
         动作空间：
@@ -252,10 +262,10 @@ class RL_Q():
         # else:
         #     action_name = state_table.idxmax()
 
-        # if ((state_table == 0).all()) or self.iter_index < 15:
+        # if ((state_table == 0).all()) or self.iter_index < 20:
         #     action_name = np.random.choice(range(len(self.action_space)))
         # else:
-        #     new_list = state_table
+        #     new_list = copy.deepcopy(state_table)
         #     min_value = min(new_list)
         #     if min_value <0:
         #         for i in range(len(new_list)):
@@ -271,8 +281,8 @@ class RL_Q():
         #         if rand_val <= cumulative_weight:
         #             action_name = item
         #             break
-        # action_name = state_table.idxmax()
-        action_name = np.random.choice(range(len(self.action_space)))
+        action_name = state_table.idxmax()
+        # action_name = np.random.choice(range(len(self.action_space)))
         return action_name
 
 
@@ -280,17 +290,19 @@ class RL_Q():
         # 根据传入的参数确定转移状态
         # state_space = {}
 
-        # ect_value = 0
-        # ddl_value = 0
+        ect_value = 0
+        ddl_value = 0
+        for opt_item in self.inital_refset[:self.jingying_num]:
         # opt_item = self.inital_refset[0]
-        # job_execute_time = opt_item[2]
-        #
-        # for job in range(self.config.jobs_num):
-        #     job_makespan = job_execute_time[(self.config.stages_num - 1, job)]
-        #     if job_makespan < self.config.ect_windows[job]:  # 早前权重值
-        #         ect_value += (self.config.ect_windows[job] - job_makespan) * self.config.ect_weight[job]
-        #     elif job_makespan > self.config.ddl_windows[job]:  # 延误权重值
-        #         ddl_value += (job_makespan - self.config.ddl_windows[job]) * self.config.ddl_weight[job]
+            job_execute_time = opt_item[2]
+
+
+            for job in range(self.config.jobs_num):
+                job_makespan = job_execute_time[(self.config.stages_num - 1, job)]
+                if job_makespan < self.config.ect_windows[job]:  # 早前权重值
+                    ect_value += (self.config.ect_windows[job] - job_makespan) * self.config.ect_weight[job]
+                elif job_makespan > self.config.ddl_windows[job]:  # 延误权重值
+                    ddl_value += (job_makespan - self.config.ddl_windows[job]) * self.config.ddl_weight[job]
 
 
 
@@ -393,84 +405,117 @@ class RL_Q():
         #     elif job_makespan > self.config.ddl_windows[job]:  # 延误权重值
         #         ddl_value += (job_makespan - self.config.ddl_windows[job]) * self.config.ddl_weight[job]
         #
-        self.state_space = {}
-        # ect_or_ddl = None
+        # self.state_space = {}
+        # # ect_or_ddl = None
+        #
+        # new_delay_early = []
+        # for i in range(int(self.population / 5)):
+        #     for i_item in self.inital_refset:
+        #         ect_value = 0
+        #         ddl_value = 0
+        #         opt_item = i_item
+        #         job_execute_time = opt_item[2]
+        #
+        #         for job in range(self.config.jobs_num):
+        #             job_makespan = job_execute_time[(self.config.stages_num - 1, job)]
+        #             if job_makespan < self.config.ect_windows[job]:  # 早前权重值
+        #                 ect_value += (self.config.ect_windows[job] - job_makespan) * self.config.ect_weight[job]
+        #             elif job_makespan > self.config.ddl_windows[job]:  # 延误权重值
+        #                 ddl_value += (job_makespan - self.config.ddl_windows[job]) * self.config.ddl_weight[job]
+        #
+        #         new_delay_early.append((ddl_value,ect_value))
+        #
+        # old_delay_early = []
+        # for i in range(int(self.population / 5)):
+        #     for i_item in old_inital_refset:
+        #         ect_value = 0
+        #         ddl_value = 0
+        #         opt_item = i_item
+        #         job_execute_time = opt_item[2]
+        #
+        #         for job in range(self.config.jobs_num):
+        #             job_makespan = job_execute_time[(self.config.stages_num - 1, job)]
+        #             if job_makespan < self.config.ect_windows[job]:  # 早前权重值
+        #                 ect_value += (self.config.ect_windows[job] - job_makespan) * self.config.ect_weight[job]
+        #             elif job_makespan > self.config.ddl_windows[job]:  # 延误权重值
+        #                 ddl_value += (job_makespan - self.config.ddl_windows[job]) * self.config.ddl_weight[job]
+        #
+        #         old_delay_early.append((ddl_value,ect_value))
+        #
+        # sum_delay_change = 0
+        # sum_early_change = 0
+        # for i in range(len(old_delay_early)):
+        #     sum_delay_change += old_delay_early[i][0] - new_delay_early[i][0]
+        #     sum_early_change += old_delay_early[i][1] - new_delay_early[i][1]
 
-        new_delay_early = []
-        for i in range(self.population / 5):
-            for i_item in self.inital_refset:
-                ect_value = 0
-                ddl_value = 0
-                opt_item = i_item
-                job_execute_time = opt_item[2]
-
-                for job in range(self.config.jobs_num):
-                    job_makespan = job_execute_time[(self.config.stages_num - 1, job)]
-                    if job_makespan < self.config.ect_windows[job]:  # 早前权重值
-                        ect_value += (self.config.ect_windows[job] - job_makespan) * self.config.ect_weight[job]
-                    elif job_makespan > self.config.ddl_windows[job]:  # 延误权重值
-                        ddl_value += (job_makespan - self.config.ddl_windows[job]) * self.config.ddl_weight[job]
-
-                new_delay_early.append((ddl_value,ect_value))
-
-        old_delay_early = []
-        for i in range(self.population / 5):
-            for i_item in old_inital_refset:
-                ect_value = 0
-                ddl_value = 0
-                opt_item = i_item
-                job_execute_time = opt_item[2]
-
-                for job in range(self.config.jobs_num):
-                    job_makespan = job_execute_time[(self.config.stages_num - 1, job)]
-                    if job_makespan < self.config.ect_windows[job]:  # 早前权重值
-                        ect_value += (self.config.ect_windows[job] - job_makespan) * self.config.ect_weight[job]
-                    elif job_makespan > self.config.ddl_windows[job]:  # 延误权重值
-                        ddl_value += (job_makespan - self.config.ddl_windows[job]) * self.config.ddl_weight[job]
-
-                old_delay_early.append((ddl_value,ect_value))
-
-        sum_delay_change = 0
-        sum_early_change = 0
-        for i in range(len(old_delay_early)):
-            sum_delay_change += old_delay_early[i][0] - new_delay_early[i][0]
-            sum_early_change += old_delay_early[i][1] - new_delay_early[i][1]
-
-        average_delay_change = sum_delay_change / len(old_delay_early)
-        average_early_change = sum_early_change / len(old_delay_early)
-
+        # average_delay_change = sum_delay_change / len(old_delay_early)
+        # average_early_change = sum_early_change / len(old_delay_early)
 
 
         if self.trial == 0:
-            if average_delay_change > 0 and average_early_change > 0:
+            if ect_value > 3* ddl_value:
                 next_state = 0
-            elif average_delay_change > 0 and average_early_change <= 0:
+            elif ddl_value > 3* ect_value:
                 next_state = 1
-            elif average_delay_change <= 0 and average_early_change > 0:
+            else:
                 next_state = 2
-            else:
-                next_state = 3
 
-        elif self.trial <= 10:
-            if average_delay_change > 0 and average_early_change > 0:
+        elif self.trial <= self.i_trial:
+            if ect_value > 3* ddl_value:
+                next_state = 3
+            elif ddl_value > 3* ect_value:
                 next_state = 4
-            elif average_delay_change > 0 and average_early_change <= 0:
-                next_state = 5
-            elif average_delay_change <= 0 and average_early_change > 0:
-                next_state = 6
             else:
-                next_state = 7
+                next_state = 5
 
 
         else:
-            if average_delay_change > 0 and average_early_change > 0:
-                next_state = 8
-            elif average_delay_change > 0 and average_early_change <= 0:
-                next_state = 9
-            elif average_delay_change <= 0 and average_early_change > 0:
-                next_state = 10
+            if ect_value > 3* ddl_value:
+                next_state = 6
+            elif ddl_value > 3* ect_value:
+                next_state = 7
             else:
-                next_state = 11
+                next_state = 8
+
+        # # 0229隐
+        # sum_delay_change = 0
+        # sum_early_change = 0
+        # for i in range(len(self.delay_early)):
+        #     sum_delay_change += self.delay_early[i][0]
+        #     sum_early_change += self.delay_early[i][1]
+        # average_delay_change = sum_delay_change
+        # average_early_change = sum_early_change
+        #
+        # if self.trial == 0:
+        #     if average_delay_change > 0 and average_early_change > 0:
+        #         next_state = 0
+        #     elif average_delay_change > 0 and average_early_change <= 0:
+        #         next_state = 1
+        #     elif average_delay_change <= 0 and average_early_change > 0:
+        #         next_state = 2
+        #     else:
+        #         next_state = 3
+        #
+        # elif self.trial <= self.i_trial:
+        #     if average_delay_change > 0 and average_early_change > 0:
+        #         next_state = 4
+        #     elif average_delay_change > 0 and average_early_change <= 0:
+        #         next_state = 5
+        #     elif average_delay_change <= 0 and average_early_change > 0:
+        #         next_state = 6
+        #     else:
+        #         next_state = 7
+        #
+        #
+        # else:
+        #     if average_delay_change > 0 and average_early_change > 0:
+        #         next_state = 8
+        #     elif average_delay_change > 0 and average_early_change <= 0:
+        #         next_state = 9
+        #     elif average_delay_change <= 0 and average_early_change > 0:
+        #         next_state = 10
+        #     else:
+        #         next_state = 11
 
 
         # self.state_space[next_state] = {self.trial, ect_or_ddl}
@@ -532,30 +577,150 @@ class RL_Q():
         #         update_num += 1
         #
         # reward = update_num
-
-        if state in [0,1,2,3] and next_state in [4,5,6,7]:
-            reward = -1
-        elif state in [4,5,6,7] and next_state in [8,9,10,11]:
-            reward = -1
-        elif state in [4,5,6,7] and next_state in [0,1,2,3]:
-            reward = 1
-        elif state in [8,9,10,11] and next_state in [0,1,2,3]:
-            reward = 2
-        elif state == 11 and next_state in [8,9,10]:
-            reward = 1
-        elif state == 11 and next_state in [8,9,10]:
-            reward = 1
-        elif state == 7 and next_state in [4,5,6]:
-            reward = 1
-        elif state == 3 and next_state in [0,1,2]:
-            reward = 1
-        elif state in [0,1,2,3] and next_state in [0,1,2,3]:
-            reward = 1
-        else:
-            reward = 0
-
-
-
+        if self.a == 0:
+            if state in [0,1,2,3] and next_state in [4,5,6,7]:
+                reward = -(self.jingying_num - self.update_jingying)/ int(self.population / 5)
+            elif state in [4,5,6,7] and next_state in [8,9,10,11]:
+                reward = -(int(self.population/5) - self.update_jingying)/ int(self.population / 5)
+            elif state in [4,5,6,7] and next_state in [0,1,2,3]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state in [8,9,10,11] and next_state in [0,1,2,3]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state in [0,1,2,3] and next_state in [0,1,2,3]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state == 11 and next_state in [8,9,10]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state == 3 and next_state in [0,1,2]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state == 7 and next_state in [4,5,6]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state in [0,1,2] and next_state == 3:
+                reward = -(int(self.population/5) - self.update_jingying)/ int(self.population / 5)
+            elif state in [4,5,6] and next_state == 7:
+                reward = -(int(self.population/5) - self.update_jingying)/ int(self.population / 5)
+            elif state in [8,9,10] and next_state == 11:
+                reward = -(int(self.population/5) - self.update_jingying)/ int(self.population / 5)
+            else:
+                reward = -(int(self.population/5) - self.update_jingying)/ int(self.population / 5)
+        elif self.a == 1:
+            if state in [0, 1, 2, 3] and next_state in [4, 5, 6, 7]:
+                reward = -(self.jingying_num - self.update_jingying) / self.jingying_num
+            elif state in [4, 5, 6, 7] and next_state in [8, 9, 10, 11]:
+                reward = -(self.jingying_num - self.update_jingying)/ self.jingying_num
+            elif state in [4, 5, 6, 7] and next_state in [0, 1, 2, 3]:
+                reward = self.update_jingying/ self.jingying_num
+            elif state in [8, 9, 10, 11] and next_state in [0, 1, 2, 3]:
+                reward = self.update_jingying/ self.jingying_num
+            elif state in [0, 1, 2, 3] and next_state in [0, 1, 2, 3]:
+                reward = self.update_jingying/ self.jingying_num
+            else:
+                reward = 0
+        elif self.a == 2:
+            if state in [0,1,2,3] and next_state in [4,5,6,7]:
+                reward = -(int(self.population/5) - self.update_jingying)/ int(self.population / 5)
+            elif state in [4,5,6,7] and next_state in [8,9,10,11]:
+                reward = -(int(self.population/5) - self.update_jingying)/ int(self.population / 5)
+            elif state in [4,5,6,7] and next_state in [0,1,2,3]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state in [8,9,10,11] and next_state in [0,1,2,3]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state in [0,1,2,3] and next_state in [0,1,2,3]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state == 11 and next_state in [8,9,10]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state == 3 and next_state in [0,1,2]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state == 7 and next_state in [4,5,6]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state in [0,1,2] and next_state == 3:
+                reward = -(int(self.population/5) - self.update_jingying)/ int(self.population / 5)
+            elif state in [4,5,6] and next_state == 7:
+                reward = -(int(self.population/5) - self.update_jingying)/ int(self.population / 5)
+            elif state in [8,9,10] and next_state == 11:
+                reward = -(int(self.population/5) - self.update_jingying)/ int(self.population / 5)
+            else:
+                reward = 0
+        elif self.a == 4:
+            if state in [0,1,2,3] and next_state in [4,5,6,7]:
+                reward = -(int(self.population/5) - self.update_jingying)/ int(self.population / 5)
+            elif state in [4,5,6,7] and next_state in [8,9,10,11]:
+                reward = -(int(self.population/5) - self.update_jingying)/ int(self.population / 5)
+            elif state in [4,5,6,7] and next_state in [0,1,2,3]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state in [8,9,10,11] and next_state in [0,1,2,3]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state in [0,1,2,3] and next_state in [0,1,2,3]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state == 11 and next_state in [8,9,10]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state == 3 and next_state in [0,1,2]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state == 7 and next_state in [4,5,6]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state in [0,1,2] and next_state == 3:
+                reward = -(int(self.population/5) - self.update_jingying)/ int(self.population / 5)
+            elif state in [4,5,6] and next_state == 7:
+                reward = -(int(self.population/5) - self.update_jingying)/ int(self.population / 5)
+            elif state in [8,9,10] and next_state == 11:
+                reward = -(int(self.population/5) - self.update_jingying)/ int(self.population / 5)
+            else:
+                reward = 0
+        elif self.a == 3:
+            if state in [0,1,2,3] and next_state in [4,5,6,7]:
+                reward = -self.update_jingying/ int(self.population / 5)
+            elif state in [4,5,6,7] and next_state in [8,9,10,11]:
+                reward = -self.update_jingying/ int(self.population / 5)
+            elif state in [4,5,6,7] and next_state in [0,1,2,3]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state in [8,9,10,11] and next_state in [0,1,2,3]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state in [0,1,2,3] and next_state in [0,1,2,3]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state == 11 and next_state in [8,9,10]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state == 3 and next_state in [0,1,2]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state == 7 and next_state in [4,5,6]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state in [0,1,2] and next_state == 3:
+                reward = -self.update_jingying/ int(self.population / 5)
+            elif state in [4,5,6] and next_state == 7:
+                reward = -self.update_jingying/ int(self.population / 5)
+            elif state in [8,9,10] and next_state == 11:
+                reward = -self.update_jingying/ int(self.population / 5)
+            else:
+                reward = -self.update_jingying/ int(self.population / 5)
+        elif self.a == 5:
+            if self.trial == 0:
+                reward = math.exp(self.update_jingying/ int(self.population / 5))
+            else:
+                reward = -math.exp((int(self.population/5) - self.update_jingying)/ int(self.population / 5))
+        elif self.a == 6:
+            if state in [0, 1, 2, 3] and next_state in [4, 5, 6, 7]:
+                reward = -math.exp((int(self.population/5) - self.update_jingying)/ int(self.population / 5))
+            elif state in [4, 5, 6, 7] and next_state in [8, 9, 10, 11]:
+                reward = -math.exp((int(self.population/5) - self.update_jingying)/ int(self.population / 5))
+            elif state in [4, 5, 6, 7] and next_state in [0, 1, 2, 3]:
+                reward = math.exp(self.update_jingying/ int(self.population / 5))
+            elif state in [8, 9, 10, 11] and next_state in [0, 1, 2, 3]:
+                reward = math.exp(self.update_jingying/ int(self.population / 5))
+            elif state in [0, 1, 2, 3] and next_state in [0, 1, 2, 3]:
+                reward = math.exp(self.update_jingying/ int(self.population / 5))
+            else:
+                reward = 0
+        elif self.a == 7:
+            if state in [0, 1, 2] and next_state in [3, 4, 5]:
+                reward = -(int(self.population / 5) - self.update_jingying) / int(self.population / 5)
+            elif state in [3, 4, 5] and next_state in [6,7,8]:
+                reward = -(int(self.population / 5) - self.update_jingying)/ int(self.population / 5)
+            elif state in [6,7,8] and next_state in [0, 1, 2]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state in [3, 4, 5]and next_state in [0, 1, 2]:
+                reward = self.update_jingying/ int(self.population / 5)
+            elif state in [0, 1, 2] and next_state in [0, 1, 2]:
+                reward = self.update_jingying/ int(self.population / 5)
+            else:
+                reward = 0
 
 
         return reward
@@ -568,6 +733,8 @@ class RL_Q():
         count = 0
         i_count = 10    # 注释
         self.upadate_num = 0
+        self.delay_early = []
+        self.update_jingying = 0
 
         for index, item in enumerate(self.inital_refset):
             i = 0
@@ -576,6 +743,21 @@ class RL_Q():
             schedule = item[0]
             job_execute_time = item[2]
             obj = item[1]
+
+            if index < self.jingying_num:
+                ect_value_1 = 0
+                ddl_value_1 = 0
+                for job in range(self.config.jobs_num):
+                    job_makespan = job_execute_time[(self.config.stages_num - 1, job)]
+                    if job_makespan < self.config.ect_windows[job]:  # 早前权重值
+                        ect_value_1 += (self.config.ect_windows[job] - job_makespan) * self.config.ect_weight[job]
+                    elif job_makespan > self.config.ddl_windows[job]:  # 延误权重值
+                        ddl_value_1 += (job_makespan - self.config.ddl_windows[job]) * self.config.ddl_weight[job]
+            else:
+                i_action = np.random.choice(range(len(self.action_space)))
+                action = i_action
+
+
 
             # case_file_name = '1259_Instance_20_2_3_0,6_1_20_Rep4.txt'
             # dia = job_diagram(schedule, job_execute_time, self.file_name, 11)
@@ -588,7 +770,7 @@ class RL_Q():
                 # schedule = copy.deepcopy(schedule)
                 # job_execute_time = copy.deepcopy(job_execute_time)
                 # obj = copy.deepcopy(obj)
-                print(0,schedule,obj)
+                # print(0,schedule,obj)
                 # self.diagram = diagram.job_diagram(schedule, job_execute_time, count)
                 # self.diagram.pre()
                 count += 1
@@ -621,7 +803,7 @@ class RL_Q():
 
                 # 根据上面的工件信息特征，去确定进行领域搜索涉及的工件信息stage
                 # loca_machine, selected_job, oper_machine, oper_job = self.chosen_job(search_method_1, search_method_2,config_same_machine,stage,oper_method)
-                neig_search = neighbo_search.Neighbo_Search(schedule, job_execute_time, obj, self.file_name)
+                neig_search = neighbo_search.Neighbo_Search(schedule, job_execute_time, obj, self.file_name,self.jingying_num)
                 if search_method_1 != 'sort':
                     break_info = False
 
@@ -678,8 +860,8 @@ class RL_Q():
                     self.use_actions[exceuse_search][1] += 1
                     self.use_actions[exceuse_search][2] += (obj - update_obj)
 
-                    if obj == 0 or update_obj == 0:
-                        print(1)
+                    # if obj == 0 or update_obj == 0:
+                    #     print(1)
 
                     # new_list[index] = (update_schedule, update_obj, update_job_execute_time)
                 # 如果没有更优，则保留
@@ -694,7 +876,22 @@ class RL_Q():
                 else:
                     i+=1
 
-                    print(1, 'self.obj:{0},self.update_obj:{1}'.format(obj, update_obj))
+                    # print(1, 'self.obj:{0},self.update_obj:{1}'.format(obj, update_obj))
+
+            if index < self.jingying_num and update:
+                self.update_jingying += 1
+                ect_value_2 = 0
+                ddl_value_2 = 0
+                for job in range(self.config.jobs_num):
+                    job_makespan = update_job_execute_time[(self.config.stages_num - 1, job)]
+                    if job_makespan < self.config.ect_windows[job]:  # 早前权重值
+                        ect_value_2 += (self.config.ect_windows[job] - job_makespan) * \
+                                       self.config.ect_weight[job]
+                    elif job_makespan > self.config.ddl_windows[job]:  # 延误权重值
+                        ddl_value_2 += (job_makespan - self.config.ddl_windows[job]) * \
+                                       self.config.ddl_weight[job]
+
+                self.delay_early.append((ddl_value_1 - ddl_value_2, ect_value_1 - ect_value_2))
 
 
 
@@ -779,11 +976,11 @@ class RL_Q():
         # 获取当下的平均目标值
         self.excuse_action(action)
         action_name = self.action_space[action]
-        impro_degree = self.upadate_num / 20
-        for i_item in range(len(self.inital_refset)):
-            for j_item in self.inital_refset[i_item][0]:
-                if len(j_item) == 0:
-                    print('报错了！！！')
+        # impro_degree = self.upadate_num / 20
+        # for i_item in range(len(self.inital_refset)):
+        #     for j_item in self.inital_refset[i_item][0]:
+        #         if len(j_item) == 0:
+        #             print('报错了！！！')
 
 
 
@@ -796,8 +993,10 @@ class RL_Q():
 
         if cur_best_opt < self.best_opt:
             self.trial = 0
+            self.from_now = 0
         else:
             self.trial += 1
+            self.from_now += 1
 
         next_state = self.get_state(old_inital_refset)
         reward = self.get_reward(cur_best_opt,state,next_state)
@@ -825,16 +1024,18 @@ class RL_Q():
 
         # if next_state == 7:
 
-        if self.trial > 7:
-            self.max_iter += 1
+        # if self.trial > 7:
+        if self.from_now > self.config.jobs_num:
+            # self.max_iter += 1
+            self.from_now = 0
             jinying_i = 0
-            for index in range(4*self.population/5):
-                if jinying_i >= self.population/5:
+            for index in range(self.jingying_num,self.population-self.jingying_num):
+                if jinying_i >= self.jingying_num:
                     jinying_i = 0
                 schedule_1 = self.inital_refset[jinying_i][0]
                 schedule_2 = self.inital_refset[index][0]
                 sort_schedule = self.refer(schedule_1,schedule_2)
-                neig_search = neighbo_search.Neighbo_Search(sort_schedule, None, None,self.file_name)
+                neig_search = neighbo_search.Neighbo_Search(sort_schedule, None, None,self.file_name,self.jingying_num)
                 neig_search.re_cal(sort_schedule)
                 self.schedule_ins = Schedule_Instance(sort_schedule, neig_search.update_job_execute_time, self.file_name)
                 new_obj = self.schedule_ins.cal(neig_search.update_job_execute_time)
@@ -871,6 +1072,7 @@ class RL_Q():
         # while self.max_iter < 3:
         with open('./MDP.txt', 'a+') as fp:
             print('', file=fp)
+        delta_list = []
         while self.not_opt_iter <= self.stop_iter:
             print('数据集的名字：{0}'.format(self.file_name))
             A = self.choose_action(S, self.q_table)
@@ -882,22 +1084,23 @@ class RL_Q():
             if self.not_opt_iter == self.stop_iter:
                 q_target = R
             else:
-                q_target = R + GAMMA * self.q_table.loc[S_, :].max()
+                q_target = R + self.GAMMA * self.q_table.loc[S_, :].max()
             # if S_ != TerminalFlag:
             #     q_target = R + GAMMA * self.q_table.loc[S_, :].max()
             # else:
             #     q_target = R
             #     is_terminated = True
-            if np.isnan(q_target - q_predict):
-                print(True)
-                print(q_target)
-                print(q_predict)
-            if self.max_iter == 0:
-                self.q_table.loc[S, A] += ALPHA * (q_target - q_predict)
+            # if np.isnan(q_target - q_predict):
+            #     print(True)
+            #     print(q_target)
+            #     print(q_predict)
+            # if self.max_iter == 0:
+            self.q_table.loc[S, A] += self.ALPHA * (q_target - q_predict)
             S = S_
             step_counter += 1
 
-        delta = np.linalg.norm(q_target - q_predict)
+            delta_list.append(np.linalg.norm(q_target - q_predict))
+        delta = sum(delta_list)/len(delta_list)
         # if self.inital_obj - self.config.ture_opt < 0:
         #     CUM_REWARD += 1
 
