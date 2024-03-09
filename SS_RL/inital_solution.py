@@ -22,7 +22,7 @@ from Schedule import Schedule_Instance
 
 
 class HFS():
-    def __init__(self,file_name):
+    def __init__(self,file_name,jingying_num):
         '''
         基础数据变量：加工时间，阶段数量，工件数量，每阶段的机器数量，工件列表，延误/早到窗口，延误/早到权重，
         初始参考集变量：阶段一解生成方式，阶段二解生成方式
@@ -45,6 +45,7 @@ class HFS():
         self.intal_variable()
         self.schedule_job_block = {}
         self.population = self.config.jobs_num * 2
+        self.jingying_num = jingying_num
 
 
     def gen_jobs_sort(self, gen_method, seed=None):
@@ -348,12 +349,13 @@ class HFS():
                 self.inital_refset.append((
                     self.schedule, self.obj, self.job_execute_time, self.schedule_job_block))
         self.inital_refset = sorted(self.inital_refset, key=lambda x: x[1])
-        self.inital_refset = self.inital_refset[:self.population/5]
+        self.inital_refset = self.inital_refset[:self.jingying_num]
         # self.inital_refset['opt_solu'] = self.inital_refset['opt_solu'][:2]
 
         # 随机解
         gen_method_1 = 'random'
-        for i in range(self.population/5):
+        i_index = int((self.population - self.jingying_num) / 4) + 1
+        for i in range(i_index):
             for gen_method_2 in self.jobs_sort_method_second:
                 self.job_assignment(gen_method_1, gen_method_2, seed_num=i)
                 # 存储schedule，obj

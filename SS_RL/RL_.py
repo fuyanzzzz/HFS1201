@@ -819,21 +819,31 @@ class RL_Q():
                         for job in oper_job_list[key]:
 
                             oper_job = job
-                            neig_search = neighbo_search.Neighbo_Search(schedule, job_execute_time, obj, self.file_name)
-                            update_schedule, update_obj, update_job_execute_time = neig_search.search_opea(oper_method,obj,stage, loca_machine, selected_job, oper_machine, oper_job,search_method_1)
-                            print(0, update_schedule, update_obj)
+                            neig_search = neighbo_search.Neighbo_Search(schedule, job_execute_time, obj, self.file_name,self.jingying_num)
+                            update_schedule, update_obj, update_job_execute_time = neig_search.search_opea(
+                                oper_method,obj,stage, loca_machine, selected_job, oper_machine, oper_job,search_method_1,True)
+                            # print(0, update_schedule, update_obj)
                             # case_file_name = '1259_Instance_20_2_3_0,6_1_20_Rep4.txt'
                             # dia = job_diagram(update_schedule, update_job_execute_time,
                             # self.file_name, 21)
                             # dia.pre()
                             # plt.savefig('./img1203/pic-{}.png'.format(21))
 
-                            if update_obj == obj and stage == 0 and search_method_1 == 'effe':      # 间接实现两步调
-                                break_info = True
-                                break
+                            # if update_obj == obj and stage == 0 and search_method_1 == 'effe':      # 间接实现两步调
+                            #     break_info = True
+                            #     break
                             if update_obj < obj:
                                 break_info = True
                                 break
+                            else:
+                                neig_search = neighbo_search.Neighbo_Search(schedule, job_execute_time, obj,
+                                                                            self.file_name, self.jingying_num)
+                                update_schedule, update_obj, update_job_execute_time = neig_search.search_opea(
+                                    oper_method, obj, stage, loca_machine, selected_job, oper_machine, oper_job,
+                                    search_method_1, False)
+                                if update_obj < obj:
+                                    break_info = True
+                                    break
                         if break_info:
                             break
                 stage = int(split_list[-1])
@@ -856,7 +866,7 @@ class RL_Q():
                 if update_obj < obj:
                     update = True
                     # print(0,update_schedule,update_obj)
-                    print('成功更新-----self.obj:{0},self.update_obj:{1}'.format(obj, update_obj))
+                    # print('成功更新-----self.obj:{0},self.update_obj:{1}'.format(obj, update_obj))
                     self.use_actions[exceuse_search][1] += 1
                     self.use_actions[exceuse_search][2] += (obj - update_obj)
 
@@ -868,13 +878,13 @@ class RL_Q():
                     schedule = update_schedule
                     job_execute_time = update_job_execute_time
                     obj = update_obj
-                    if update_obj == obj and stage == 0 and search_method_1 == 'effe':
-                        i += 1
-                    else:
-                        i += 1
-
+                    # if update_obj == obj and stage == 0 and search_method_1 == 'effe':
+                    #     i += 1
+                    # else:
+                    #     i += 1
                 else:
-                    i+=1
+                    i += 1
+
 
                     # print(1, 'self.obj:{0},self.update_obj:{1}'.format(obj, update_obj))
 

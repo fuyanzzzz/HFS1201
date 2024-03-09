@@ -74,7 +74,8 @@ class DataInfo():
         remainder = result % 540
 
         skiprows_i = (result // 540) *540*5 + remainder*4 + max(0,remainder-180)*1 + max(0,remainder-360)*1
-        if result == int(np.loadtxt("HFSDDW_Small_Best_Sequence.txt", skiprows=skiprows_i, max_rows=1, usecols=(1),dtype=int)):   # 工件数量
-            self.ture_opt = int(np.loadtxt("HFSDDW_Small_Best_Sequence.txt", skiprows=skiprows_i, max_rows=1, usecols=(7),dtype=int))
-        else:
-            self.true_opt = None
+        # if result == int(np.loadtxt("bestSeq_Small.txt", skiprows=skiprows_i, max_rows=1, usecols=(1),dtype=int)):   # 工件数量
+        #     self.ture_opt = int(np.loadtxt("bestSeq_Small.txt", skiprows=skiprows_i, max_rows=1, usecols=(7),dtype=int))
+        # else:
+        #     self.true_opt = None
+        self.ture_opt = int(np.loadtxt("bestSeq_Small.txt", skiprows=skiprows_i, max_rows=1, usecols=(-1), dtype=int))

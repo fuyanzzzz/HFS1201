@@ -312,6 +312,9 @@ def acceptance_criterion(jobs_sort,local_obj,ts):
         history_obj.append(final_obj)
         #　计算history_obj 列表中的平均值
         avg_history_obj = sum(history_obj)/len(history_obj)
+        if ts is None:
+            ts_list = [2, 3, 4, 5, 6, 7]
+            ts = np.random.choice(ts_list)
         if final_obj < avg_history_obj:
             ts = min(ts+1,7)        # ts在前面的哪里有先定义嘛,理解一下这个操作
         else:
@@ -321,7 +324,7 @@ def acceptance_criterion(jobs_sort,local_obj,ts):
             index = history_schedule.index(cur_seqence)
             cur_obj = history_obj[index]
         else:
-            choice_list = random.sample(history_schedule,ts)
+            choice_list = random.sample(history_schedule,min(ts,len(history_schedule)))
             index = history_schedule.index(choice_list[0])
             cur_seqence = choice_list[0]
             cur_obj = history_obj[index]
@@ -450,7 +453,21 @@ def find_limited_neighbors(job_sort_on_stages,stage):
     # 返回的变量： 已排完的schedule， 目标值， 工件在最后一个阶段的完工时间
 
     schedule, job_completion_time, machine_completion_time, current_obj = job_assignment(job_sort_on_stages[0], end_stage=stage,job_sort_on_stages=job_sort_on_stages)
+    job_execute_time = {}
+    for stage in range(stages_num):
+        for job in range(jobs_num):
+            job_execute_time[(stage, job)] = 0
+    for stage in range(2):
+        for job in range(jobs_num):
+            job_execute_time[(stage, job)] = job_completion_time[stage][job]
 
+    from SS_RL.diagram import job_diagram
+    import matplotlib.pyplot as plt
+
+    # dia = job_diagram(schedule, job_execute_time, file_name, 1)
+    # dia.pre()
+    # plt.savefig('./img1203/pic-{}.png'.format(1))
+    # print(1)
     limited_neighbors = []
     job_sort_on_stages[stage] = np.argsort(job_completion_time[stage-1])
     job_sort = list(job_sort_on_stages[stage])
@@ -547,17 +564,47 @@ def limited_local_search(job_sort,best_obj,best_schedule):
                 job_sort_on_stages[stage] = sequence
                 # 进行工件调度,注意这里的new_schedule是全部阶段的schedule
                 new_schedule, job_completion_time, machine_completion_time, current_obj = job_assignment(job_sort_on_stages)              # 如果job_assignment这个函数需要从指定阶段开始，需要传入上一个阶段的工件完工时间
+                # job_execute_time = {}
+                # for stage in range(stages_num):
+                #     for job in range(jobs_num):
+                #         job_execute_time[(stage, job)] = 0
+                # for stage in range(2):
+                #     for job in range(jobs_num):
+                #         job_execute_time[(stage, job)] = job_completion_time[stage][job]
+                #
+                # from SS_RL.diagram import job_diagram
+                # import matplotlib.pyplot as plt
+                #
+                # dia = job_diagram(schedule, job_execute_time, file_name, 1)
+                # dia.pre()
+                # plt.savefig('./img1203/pic-{}.png'.format(1))
+                # print(1)
                 # 进行空闲插入邻域搜索
                 new_obj,all_job_block,_ = idle_time_insertion(new_schedule)
 
                 if new_obj < best_obj:      # 这里得到的东西都是已经到了最后一个阶段的东西，
                     best_schedule = new_schedule
                     job_sort = np.argsort(job_completion_time[stage])   # 确定下一个阶段的工件调度顺序
-                    chosen_sequence = np.copy.copy(sequence)
+                    chosen_sequence = copy.deepcopy(sequence)
             job_sort_on_stages[stage] = chosen_sequence
 
         else:
             best_schedule, job_completion_time, machine_completion_time, current_obj = job_assignment(job_sort_on_stages,end_stage=stage+1)
+            job_execute_time = {}
+            for stage in range(stages_num):
+                for job in range(jobs_num):
+                    job_execute_time[(stage, job)] = 0
+            for stage in range(2):
+                for job in range(jobs_num):
+                    job_execute_time[(stage, job)] = job_completion_time[stage][job]
+
+            from SS_RL.diagram import job_diagram
+            import matplotlib.pyplot as plt
+
+            # dia = job_diagram(schedule, job_execute_time, file_name, 1)
+            # dia.pre()
+            # plt.savefig('./img1203/pic-{}.png'.format(1))
+            # print(1)
             job_sort = np.argsort(job_completion_time[stage])
             job_sort_on_stages[stage] = job_sort
     cur_obj, all_job_block,_ = idle_time_insertion(best_schedule)  # 每进行一次重构，也需要进行空闲插入程序
@@ -590,7 +637,7 @@ if __name__ == '__main__':
         setup_time[0] = np.zeros((jobs_num, jobs_num))
         setup_time[1] = np.zeros((jobs_num, jobs_num))
         best_opt_list = []
-        for i in range(10):
+        for i_i in range(10):
 
             machine_num_on_stage = []
             for job in range(stages_num):
@@ -629,49 +676,41 @@ if __name__ == '__main__':
             inital_schedule,intal_obj,job_sort_inital= inintal_solution()
             # 解构，划分出两个移除工件序列，剩余工件序列
             d_list = [1,2,3,4]   #  初始解d_list 列表
-            i = 0
             ts = None
-
+            a_list = []
             while total_time <= 90 * 2*jobs_num / 1000:
                 print('解构重构')
                 # 解构重构: 这里只对第一阶段上的工件排序进行调整
                 jobs_sort,recon_schedule,recon_obj = destruction_reconstruction(job_sort_inital,d_list)
-                history_obj.append(recon_obj)
-                history_schedule.append(jobs_sort)
                 # local search：这里也是只对第一阶段的工件排序进行调整
                 t2 = time.time()
                 total_time = t2 - t1
-                if total_time <= 90 * 2*jobs_num / 1000:
-                    break
+                # if total_time >= 90 * 2*jobs_num / 1000:
+                #     break
                 print('local search')
+
                 local_schedule,local_obj,jobs_sort = local_search(jobs_sort,recon_obj,recon_schedule)
-                history_obj.append(local_obj)
-                history_schedule.append(jobs_sort)
                 t2 = time.time()
                 total_time = t2 - t1
-                if total_time <= 90 * 2*jobs_num / 1000:
-                    break
+                # if total_time >= 90 * 2*jobs_num / 1000:
+                #     break
                 # 第二阶段的local search：这里会对其他阶段的工件排序造成影响
                 print('第二阶段local search')
                 schedule,obj = limited_local_search(jobs_sort,local_obj,local_schedule)     # 目标值输出
                 print('目标值：{0}'.format(local_obj))
-                history_obj.append(obj)
-                history_schedule.append(schedule)
                 t2 = time.time()
                 total_time = t2 - t1
-                if total_time <= 90 * 2*jobs_num / 1000:
-                    break
+                # if total_time >= 90 * 2*jobs_num / 1000:
+                #     break
                 # 接受标准
                 print('接受标准')
                 job_sort_inital,ts,cur_obj,history_obj,history_schedule = acceptance_criterion(jobs_sort,local_obj,ts)
-                history_obj.append(history_obj)
-                history_schedule.append(job_sort_inital)
-                i += 1
                 t2 = time.time()
                 total_time = t2 - t1
                 print(total_time)
-                print(i)
-
+                print(i_i)
+                a_list.append(cur_obj)
+            i_i += 1
             best_obj = min(history_obj)
             index = history_obj.index(best_obj)
             best_schedule = history_schedule[index]
@@ -688,23 +727,23 @@ if __name__ == '__main__':
                 for job in range(jobs_num):
                     job_execute_time[(stage, job)] = job_completion_time[stage][job]
 
-            # from SS_RL.diagram import job_diagram
-            # import matplotlib.pyplot as plt
-            #
+            from SS_RL.diagram import job_diagram
+            import matplotlib.pyplot as plt
+
             # dia = job_diagram(schedule, job_execute_time, file_name, 1)
             # dia.pre()
             # plt.savefig('./img1203/pic-{}.png'.format(1))
             # print(1)
             best_opt_list.append(improve_obj)
-            with open('./MDP0304.txt', 'a+') as fp:
+            with open('./tiankou0304_termination/hfs_30.txt', 'a+') as fp:
                 print(improve_obj, file=fp)
                 print(file_name, file=fp)
-                if i == 9:
+                if i_i == 9:
                     print('目标值列表：', best_opt_list, file=fp)
                 print('', file=fp)
                 print('', file=fp)
 
-        with open('./text_result_0304.txt', 'a+') as fp:
+        with open('./tiankou0304_termination/text_result_hfs_30.txt', 'a+') as fp:
             print(file_name, config.ture_opt, round(sum(best_opt_list) / len(best_opt_list), 2), file=fp)
 
 

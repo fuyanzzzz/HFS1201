@@ -19,7 +19,7 @@ from config import *
 from Schedule import Schedule_Instance
 
 class Neighbo_Search():
-    def __init__(self,schedule, job_execute_time, obj,file_name):
+    def __init__(self,schedule, job_execute_time, obj,file_name,jingying_num):
         # self.opea_name = opea_name
         self.schedule = copy.deepcopy(schedule)
         self.obj = obj
@@ -28,7 +28,7 @@ class Neighbo_Search():
 
         self.update_schedule = copy.deepcopy(schedule)
         self.config = AllConfig.get_config(file_name)
-        self.hfs = ini.HFS(file_name)
+        self.hfs = ini.HFS(file_name,jingying_num)
         self.recal_reset_variable()
         self.schedule_ins = Schedule_Instance(schedule, job_execute_time,file_name)
         # job_diagram(self.update_schedule,job_process_time,job_execute_time,stages_num,jobs_num,ddl_windows,ect_windows,ect_weight,ddl_weight,epoch)
@@ -41,19 +41,20 @@ class Neighbo_Search():
 
         self.update_obj = self.obj
 
-    def insert_opera(self, stage, loca_machine, loca_job, oper_machine, oper_job,search_method_1):
-
+    def insert_opera(self, stage, loca_machine, loca_job, oper_machine, oper_job,search_method_1,insert_last):
+        # 获取插入工件的索引
         loca_job_index = self.update_schedule[(stage, loca_machine)].index(loca_job)
+        # 以下暂时不清楚作用是什么
         if loca_job_index+1 < len(self.update_schedule[(stage, loca_machine)]):
             loca_job_later_ = self.update_schedule[(stage, loca_machine)][loca_job_index+1]
         else:
             loca_job_later_ = loca_job
         loca_job_later_index = self.update_schedule[(stage, loca_machine)].index(loca_job_later_)
         self.update_schedule[(stage, loca_machine)].remove(loca_job)
-
+        # 获取被插入工件的索引
         oper_job_index = self.update_schedule[(stage, oper_machine)].index(oper_job)
 
-
+        # 确保插入的工件不超过最后一个工件的位置
         oper_job_index = min(oper_job_index, len(self.update_schedule[(stage, oper_machine)]) - 1)  # 其实这个就是一个防错了！
         if search_method_1 == 'dire':
             stage_0_loca_job_machine = None
@@ -63,20 +64,47 @@ class Neighbo_Search():
                         stage_0_loca_job_machine = machine
                         break
             if oper_job == self.update_schedule[(1,oper_machine)][0]:
+                # 若是早到工件，插入的位置是该机器上的第一个位置
                 self.update_schedule[(stage, oper_machine)].insert(oper_job_index, loca_job)
                 # 第一阶段的工件也在insert到最后【应该是第一阶段所有工件中完工时间最早的机器上】        # 还需要完善
-                self.update_schedule[(0,stage_0_loca_job_machine)].remove(loca_job)
+                # 获得第一阶段上所有机器上最后一个工件的完工时间，取具有最小完工时间的机器
+                # chosen_machine_0 = None
+                # chosen_job_0 = None
+                # min_compelte_time_0 = np.inf
+                # for i_machine in range(self.config.machine_num_on_stage[0]):
+                #     i_last_job = self.update_schedule[(0, i_machine)]
+                #     if self.job_execute_time[(stage,i_last_job)] < min_compelte_time_0:
+                #         min_compelte_time_0 = self.job_execute_time[(stage,i_last_job)]
+                #         chosen_job_0 = i_last_job
+                #         chosen_machine_0 = i_machine
+
+                self.update_schedule[(0, stage_0_loca_job_machine)].remove(loca_job)
                 self.update_schedule[(0, stage_0_loca_job_machine)].insert(0, loca_job)
 
 
             else:
                 self.update_schedule[(1, oper_machine)].append(loca_job)
                 # 第一阶段的工件也在insert到最前面
+                chosen_machine_0 = None
+                chosen_job_0 = None
+                min_compelte_time_0 = np.inf
+                for i_machine in range(self.config.machine_num_on_stage[0]):
+                    if self.update_schedule[(0, i_machine)]:
+                        i_last_job = self.update_schedule[(0, i_machine)][-1]
+                        if self.job_execute_time[(0,i_last_job)] < min_compelte_time_0:
+                            min_compelte_time_0 = self.job_execute_time[(stage,i_last_job)]
+                            chosen_job_0 = i_last_job
+                            chosen_machine_0 = i_machine
                 self.update_schedule[(0, stage_0_loca_job_machine)].remove(loca_job)
-                self.update_schedule[(0, stage_0_loca_job_machine)].append(loca_job)
+                self.update_schedule[(0, chosen_machine_0)].append(loca_job)
 
             # 如果因此此次的操作导致有新的工件卡住，则在第一阶段的所有机器中选择一个松弛度最高的机器插入
             self.re_cal(self.update_schedule)
+            update_schedule = copy.deepcopy(self.update_schedule)
+            update_job_execute_time = copy.deepcopy(self.update_job_execute_time)
+            obj_item = self.schedule_ins.cal(self.update_job_execute_time)
+            _,_,after_obj = self.schedule_ins.idle_time_insertion(update_schedule, self.update_job_execute_time, obj_item)
+
             if stage == 1 and loca_job_index < len(self.update_schedule[(0, loca_machine)]):
 
                 for job in self.update_schedule[(0, loca_machine)][loca_job_later_index:]:
@@ -123,22 +151,32 @@ class Neighbo_Search():
                                             max_slackness_job_machine = machine
                         if max_slackness_job:
                             self.swap_opera(0, max_slackness_job_machine, max_slackness_job, job_machine, job)
+                            self.re_cal(self.update_schedule)
+                            obj_item_2 = self.schedule_ins.cal(self.update_job_execute_time)
+                            _, _, after_obj_2 = self.schedule_ins.idle_time_insertion(self.update_schedule,
+                                                                                    self.update_job_execute_time, obj_item_2)
+                            if after_obj < after_obj_2:
+                                self.update_schedule = update_schedule
+                                self.update_job_execute_time = update_job_execute_time
                         break
 
 
         else:
+            # 若需要操作的工件是该机器上的最后一个工件
             if oper_job_index == len(self.update_schedule[(stage, oper_machine)]) - 1:
-                i = np.random.choice([0, 1])
-                # if i == 0:
-                #     self.update_schedule[(stage, oper_machine)].append(loca_job)
-                # else:
-                self.update_schedule[(stage, oper_machine)].insert(oper_job_index, loca_job)
+                # i = np.random.choice([0, 1])
+                if insert_last:
+                    self.update_schedule[(stage, oper_machine)].append(loca_job)
+                else:
+                    self.update_schedule[(stage, oper_machine)].insert(oper_job_index, loca_job)
             else:
                 self.update_schedule[(stage, oper_machine)].insert(oper_job_index, loca_job)
 
+            # 执行完插入操作之后，判断一下这两个工件是否会被卡，如果被卡住，交换他们在第一阶段的位置
             # 判断现在两个工件第二阶段的开始加工时间，谁在先：
             self.re_cal(self.update_schedule)
-
+            update_schedule = copy.deepcopy(self.update_schedule)
+            # loca_job表示需要操作的工件，oper_job表示的是需要被插入或者交换的工件
             if (self.update_job_execute_time[(1,loca_job)] - self.config.job_process_time[1][loca_job]) <\
             (self.update_job_execute_time[(1, oper_job)] - self.config.job_process_time[1][oper_job]):
                 per_job = loca_job
@@ -148,7 +186,7 @@ class Neighbo_Search():
                 later_job = loca_job
 
             if (self.update_job_execute_time[(0,per_job)] - self.config.job_process_time[0][per_job]) >\
-            (self.update_job_execute_time[(0, later_job)] - self.config.job_process_time[0][later_job]):
+            (self.update_job_execute_time[(0,later_job)] - self.config.job_process_time[0][later_job]):
                 # 找到这两个工件所在的机器
                 per_job_machine = None
                 later_job_machine = None
@@ -160,6 +198,8 @@ class Neighbo_Search():
                             later_job_machine = machine
 
                 self.swap_opera(0, per_job_machine, per_job, later_job_machine, later_job)
+                self.re_cal(self.update_schedule)
+
 
     def swap_opera(self, stage, loca_machine, selected_job, oper_machine, oper_job):
 
@@ -245,7 +285,7 @@ class Neighbo_Search():
     def chosen_job2_oper(self, selected_job, stage, search_method_1,config_same_machine,oper_method):
 
         # 确定被选中的工件所在的机器
-        print('1self.update_schedule:{0}'.format(self.update_schedule))
+        # print('1self.update_schedule:{0}'.format(self.update_schedule))
         loca_machine = None
         oper_job_list = {}
         for machine in range(self.config.machine_num_on_stage[stage]):
@@ -802,7 +842,7 @@ class Neighbo_Search():
 
 
 
-    def search_opea(self,oper_method,obj,stage, loca_machine, selected_job, oper_machine, oper_job,search_method_1):
+    def search_opea(self,oper_method,obj,stage, loca_machine, selected_job, oper_machine, oper_job,search_method_1,insert_last):
         # self.re_cal()
         # print(self.update_job_execute_time)
         # print(self.update_schedule)
@@ -819,7 +859,7 @@ class Neighbo_Search():
             insert操作
             '''
             if oper_method == 'insert':
-                self.insert_opera(stage, loca_machine, selected_job, oper_machine, oper_job,search_method_1)
+                self.insert_opera(stage, loca_machine, selected_job, oper_machine, oper_job,search_method_1,insert_last)
                 # 更新工件完工时间
                 self.re_cal(self.update_schedule)
 
@@ -830,8 +870,6 @@ class Neighbo_Search():
                 self.update_schedule, self.update_job_execute_time, self.update_obj = self.schedule_ins.idle_time_insertion(
                     self.update_schedule, self.update_job_execute_time, self.update_obj)
 
-                if obj == 0 or self.update_obj == 0:
-                    print(1)
 
 
 
