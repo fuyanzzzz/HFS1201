@@ -48,7 +48,7 @@ TerminalFlag = "terminal"
 
 
 class RL_Q():
-    def __init__(self,n_states,n_actions,inital_refset,q_table,file_name,iter,stop_iter,a,i_trial,lr,jingying,discount_rate):
+    def __init__(self,n_states,n_actions,inital_refset,q_table,file_name,iter,stop_iter,a,i_trial,lr,jingying,discount_rate,population_refset):
 
         self.trial = 0
         self.ori_mean_obj = 9999999
@@ -85,6 +85,8 @@ class RL_Q():
         self.GAMMA = discount_rate
         self.jingying_num = int(self.population* jingying)
         self.ALPHA = lr
+        self.need_rebulid = True
+        self.population_refset = population_refset
 
         '''
         动作空间：
@@ -729,6 +731,7 @@ class RL_Q():
         # 但这样有一个问题，就是分成两个子种群就已经没有意义了
 
     def excuse_action(self,action):
+        self.need_rebulid = True
         new_list = []
         count = 0
         i_count = 10    # 注释
@@ -864,6 +867,7 @@ class RL_Q():
 
 
                 if update_obj < obj:
+                    self.need_rebulid = False
                     update = True
                     # print(0,update_schedule,update_obj)
                     # print('成功更新-----self.obj:{0},self.update_obj:{1}'.format(obj, update_obj))
@@ -1025,8 +1029,8 @@ class RL_Q():
 
         # next_state_name = self.state_space[next_state]
         # if self.file_name == '1236_Instance_20_2_3_0,6_0,2_20_Rep1.txt':
-        with open('./MDP.txt', 'a+') as fp:
-            print('s:{0},   r:{2},    a:{1},    s_:{3}'.format(state, action_name, reward, next_state), file=fp)
+        # with open('./MDP.txt', 'a+') as fp:
+        #     print('s:{0},   r:{2},    a:{1},    s_:{3}'.format(state, action_name, reward, next_state), file=fp)
 
 
         new_inital_refset = copy.deepcopy(self.inital_refset)
@@ -1035,27 +1039,36 @@ class RL_Q():
         # if next_state == 7:
 
         # if self.trial > 7:
-        if self.from_now > self.config.jobs_num:
+        # if self.from_now > self.config.jobs_num:
             # self.max_iter += 1
+        if self.need_rebulid:
             self.from_now = 0
             jinying_i = 0
-            for index in range(self.jingying_num,self.population-self.jingying_num):
-                if jinying_i >= self.jingying_num:
-                    jinying_i = 0
-                schedule_1 = self.inital_refset[jinying_i][0]
-                schedule_2 = self.inital_refset[index][0]
-                sort_schedule = self.refer(schedule_1,schedule_2)
-                neig_search = neighbo_search.Neighbo_Search(sort_schedule, None, None,self.file_name,self.jingying_num)
-                neig_search.re_cal(sort_schedule)
-                self.schedule_ins = Schedule_Instance(sort_schedule, neig_search.update_job_execute_time, self.file_name)
-                new_obj = self.schedule_ins.cal(neig_search.update_job_execute_time)
+            self.inital_refset = sorted(self.inital_refset, key=lambda x: x[1])
+            best_item = copy.deepcopy(self.inital_refset[0])
+            self.ini.bulid_reference(self.population_refset)
+            self.inital_refset = self.ini.inital_refset + [best_item]
+            self.inital_refset = sorted(self.inital_refset, key=lambda x: x[1])
+            self.inital_refset.remove(self.inital_refset[-1])
+            print(1)
 
-                new_inital_refset[index] =  \
-                    [copy.deepcopy(sort_schedule), copy.deepcopy(new_obj), copy.deepcopy(neig_search.update_job_execute_time)]
-                # new_inital_refset.append([copy.deepcopy(sort_schedule), copy.deepcopy(new_obj), copy.deepcopy(neig_search.update_job_execute_time)])
-                jinying_i += 1
-
-            self.inital_refset = copy.deepcopy(new_inital_refset)
+            # for index in range(self.jingying_num,self.population-self.jingying_num):
+            #     if jinying_i >= self.jingying_num:
+            #         jinying_i = 0
+            #     schedule_1 = self.inital_refset[jinying_i][0]
+            #     schedule_2 = self.inital_refset[index][0]
+            #     sort_schedule = self.refer(schedule_1,schedule_2)
+            #     neig_search = neighbo_search.Neighbo_Search(sort_schedule, None, None,self.file_name,self.jingying_num)
+            #     neig_search.re_cal(sort_schedule)
+            #     self.schedule_ins = Schedule_Instance(sort_schedule, neig_search.update_job_execute_time, self.file_name)
+            #     new_obj = self.schedule_ins.cal(neig_search.update_job_execute_time)
+            #
+            #     new_inital_refset[index] =  \
+            #         [copy.deepcopy(sort_schedule), copy.deepcopy(new_obj), copy.deepcopy(neig_search.update_job_execute_time)]
+            #     # new_inital_refset.append([copy.deepcopy(sort_schedule), copy.deepcopy(new_obj), copy.deepcopy(neig_search.update_job_execute_time)])
+            #     jinying_i += 1
+            #
+            # self.inital_refset = copy.deepcopy(new_inital_refset)
             # self.inital_refset = self.inital_refset[:10] + new_inital_refset
 
                 # 计算一下
@@ -1128,8 +1141,192 @@ class RL_Q():
             CUM_REWARD += R
             S = S_
             step_counter += 1
+            if self.not_opt_iter == self.stop_iter:
+                self.inital_refset = sorted(self.inital_refset, key=lambda x: x[1])
+                # 对于最优解再次进行优化
+                # 查看第二阶段是否存在被卡住的工件
+                schedule_1 = self.inital_refset[0][0]
+                job_execute_time = self.inital_refset[0][2]
+                obj_1 = self.inital_refset[0][1]
+                min_stuck_job = None  # 初始化最先被卡住的工件为None
+                min_stuck_time = np.inf  # 初始化最先卡住的工件的最早开始时间为无穷大
+                possible_stuck_job_list = []
+                for i_job in range(self.config.jobs_num):
+                    start_process_time_1 = job_execute_time[(1,i_job)] - self.config.job_process_time[1][i_job]
+                    # 若是该工件的第一阶段的完工时间等于第二阶段的开始加工时间 & 该工件是延误工件
+                    if job_execute_time[(0, i_job)] == start_process_time_1 and job_execute_time[(1,i_job)] > self.config.ddl_windows[i_job]:
+                        possible_stuck_job_list.append((i_job,start_process_time_1))
+                need_break_info = False
+                if possible_stuck_job_list:
 
-        return min([self.inital_refset[i][1] for i in range(len(self.inital_refset))]),CUM_REWARD
+                    possible_stuck_job_list = sorted(possible_stuck_job_list, key=lambda x: x[1])
+                    need_job_list = [item[0] for item in possible_stuck_job_list]
+                    for need_job in need_job_list:
+                        # 获取该工件在第一阶段前面的所有工件
+                        need_job_on_machine = None
+                        for j_machine in range(self.config.machine_num_on_stage[0]):
+                            if need_job in schedule_1[(0,j_machine)]:
+                                # 获取索引
+                                need_job_index = schedule_1[(0,j_machine)].index(need_job)
+                                per_job_list = schedule_1[(0,j_machine)][:need_job_index]
+                                need_job_on_machine = j_machine
+                        oper_job_list = {}
+
+                        if per_job_list:
+                            for x_job in per_job_list:
+                                oper_job_list[x_job] = []
+                                for y_machine in range(self.config.machine_num_on_stage[0]):
+                                    if y_machine != need_job_on_machine:
+                                        for y_job in schedule_1[(0,y_machine)]:
+                                            if self.config.job_process_time[0][y_job] < self.config.job_process_time[0][x_job]:
+                                                oper_job_list[x_job].append(y_job)
+
+
+
+                            for key in oper_job_list.keys():
+                                for job in oper_job_list[key]:
+                                    for ii_machine in range(self.config.machine_num_on_stage[0]):
+                                        if job in schedule_1[(0, ii_machine)]:
+                                            oper_machine = ii_machine
+                                    oper_job = job
+
+                                    neig_search = neighbo_search.Neighbo_Search(schedule_1, job_execute_time, obj_1,
+                                                                                self.file_name, self.jingying_num)
+                                    oper_method = 'swap'
+                                    search_method_1 = 'effe'
+                                    update_schedule, update_obj, update_job_execute_time = neig_search.search_opea(
+                                        oper_method, obj_1, 0, need_job_on_machine, key, oper_machine, oper_job,
+                                        search_method_1, True)
+
+                                    if update_obj < obj_1:
+                                        self.inital_refset[0][0] = copy.deepcopy(update_schedule)
+                                        self.inital_refset[0][1] = copy.deepcopy(update_obj)
+                                        self.inital_refset[0][2] = copy.deepcopy(update_job_execute_time)
+                                        need_break_info = True
+                                        self.not_opt_iter = 0
+                                        break
+                                if need_break_info:
+                                    break
+                        if need_break_info:
+                            break
+                if need_break_info is False:
+                    need_break_info_2 = False
+                    # 若是第二阶段上，则也是交换，找到所有的延误工件
+                    ddl_job_list = []
+                    ect_job_list = []
+                    for n_job in range(self.config.jobs_num):
+                        if job_execute_time[(1, n_job)] > self.config.ddl_windows[n_job]:
+                            w_ddl_time = self.config.ddl_weight[n_job] * (job_execute_time[(1, n_job)] - self.config.ddl_windows[n_job])
+                            ddl_job_list.append((n_job,w_ddl_time))
+                        if job_execute_time[(1, n_job)] < self.config.ect_windows[n_job]:
+                            w_ect_time = self.config.ect_weight[n_job] * (self.config.ect_windows[n_job] - job_execute_time[(1, n_job)])
+                            ect_job_list.append((n_job,w_ect_time))
+
+
+                    if ddl_job_list:
+                        ddl_job_list = sorted(ddl_job_list, key=lambda x: x[1],reverse=True)
+                        job_list = [item[0] for item in ddl_job_list]
+                        for need_job in job_list:
+                            # 获取该工件在第二阶段前面的所有工件
+                            need_job_on_machine = None
+                            for j_machine in range(self.config.machine_num_on_stage[0]):
+                                if need_job in schedule_1[(1,j_machine)]:
+                                    # 获取索引
+                                    need_job_index = schedule_1[(1,j_machine)].index(need_job)
+                                    per_job_list = schedule_1[(1,j_machine)][:need_job_index]
+                                    need_job_on_machine = j_machine
+                            oper_job_list = {}
+                            need_break_info_2 = False
+                            if per_job_list:
+                                for x_job in per_job_list:
+                                    oper_job_list[x_job] = []
+                                    for y_machine in range(self.config.machine_num_on_stage[0]):
+                                        if y_machine != need_job_on_machine:
+                                            for y_job in schedule_1[(1,y_machine)]:
+                                                oper_job_list[x_job].append(y_job)
+
+                                for key in oper_job_list.keys():
+
+                                    for job in oper_job_list[key]:
+                                        for ii_machine in range(self.config.machine_num_on_stage[0]):
+                                            if job in schedule_1[(1, ii_machine)]:
+                                                oper_machine = ii_machine
+                                        oper_job = job
+                                        neig_search = neighbo_search.Neighbo_Search(schedule_1, job_execute_time, obj_1,
+                                                                                    self.file_name, self.jingying_num)
+                                        oper_method = 'swap'
+                                        search_method_1 = 'effe'
+                                        update_schedule, update_obj, update_job_execute_time = neig_search.search_opea(
+                                            oper_method, obj_1, 1, need_job_on_machine, key, oper_machine, oper_job,
+                                            search_method_1, True)
+
+                                        if update_obj < obj_1:
+                                            self.inital_refset[0][0] = copy.deepcopy(update_schedule)
+                                            self.inital_refset[0][1] = copy.deepcopy(update_obj)
+                                            self.inital_refset[0][2] = copy.deepcopy(update_job_execute_time)
+                                            need_break_info_2 = True
+                                            self.not_opt_iter = 0
+                                            break
+                                    if need_break_info_2:
+                                        break
+                            if need_break_info_2:
+                                break
+                    if need_break_info_2 is False and ect_job_list:
+                        ect_job_list = sorted(ect_job_list, key=lambda x: x[1], reverse=True)
+                        job_list = [item[0] for item in ect_job_list]
+                        for need_job in job_list:
+                            # 获取该工件在第二阶段前面的所有工件
+                            need_job_on_machine = None
+                            for j_machine in range(self.config.machine_num_on_stage[0]):
+                                if need_job in schedule_1[(1, j_machine)]:
+                                    # 获取索引
+                                    need_job_index = schedule_1[(1, j_machine)].index(need_job)
+                                    if need_job_index+1 < len(schedule_1[(1, j_machine)]):
+                                        per_job_list = schedule_1[(1, j_machine)][need_job_index+1:]
+                                    need_job_on_machine = j_machine
+                            oper_job_list = {}
+                            need_break_info_3 = False
+                            if per_job_list:
+                                for x_job in per_job_list:
+                                    oper_job_list[x_job] = []
+                                    for y_machine in range(self.config.machine_num_on_stage[0]):
+                                        if y_machine != need_job_on_machine:
+                                            for y_job in schedule_1[(1, y_machine)]:
+                                                oper_job_list[x_job].append(y_job)
+
+                                for key in oper_job_list.keys():
+                                    for job in oper_job_list[key]:
+                                        for ii_machine in range(self.config.machine_num_on_stage[0]):
+                                            if job in schedule_1[(1, ii_machine)]:
+                                                oper_machine = ii_machine
+                                        oper_job = job
+                                        neig_search = neighbo_search.Neighbo_Search(schedule_1, job_execute_time, obj_1,
+                                                                                    self.file_name, self.jingying_num)
+                                        oper_method = 'swap'
+                                        search_method_1 = 'effe'
+                                        update_schedule, update_obj, update_job_execute_time = neig_search.search_opea(
+                                            oper_method, obj_1, 1, need_job_on_machine, key, oper_machine,
+                                            oper_job,
+                                            search_method_1, True)
+
+                                        if update_obj < obj_1:
+                                            self.inital_refset[0][0] = copy.deepcopy(update_schedule)
+                                            self.inital_refset[0][1] = copy.deepcopy(update_obj)
+                                            self.inital_refset[0][2] = copy.deepcopy(update_job_execute_time)
+                                            need_break_info_3 = True
+                                            self.not_opt_iter = 0
+                                            break
+                                    if need_break_info_3:
+                                        break
+                            if need_break_info_3:
+                                break
+
+
+        opt_list = [self.inital_refset[i][1] for i in range(len(self.inital_refset))]
+        best_opt = min(opt_list)
+        best_index = opt_list.index(best_opt)
+        best_item = self.inital_refset[best_index]
+        return best_opt,CUM_REWARD,best_item
 
 # if __name__ == '__main__':
 #     rlll = RL_Q(8, ACTIONS)

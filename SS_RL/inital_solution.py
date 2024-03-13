@@ -42,6 +42,7 @@ class HFS():
         self.all_job_block = []
         self.job_info = {}
         self.inital_refset = []
+        self.population_refset = []
         self.intal_variable()
         self.schedule_job_block = {}
         self.population = self.config.jobs_num * 2
@@ -75,7 +76,7 @@ class HFS():
             b = np.array([self.job_execute_time[(0, job)] for job in range(self.config.jobs_num)])
             job_sort = np.argsort(b)
         elif gen_method == 'random':
-            random.seed(seed)  # 设置随机种子为42，可以是任意整数
+            # random.seed(seed)  # 设置随机种子为42，可以是任意整数
             # 生成随机排序的数组
             job_sort = self.job_list
             random.shuffle(job_sort)  # 随机打乱数组顺序
@@ -341,26 +342,102 @@ class HFS():
         第一阶段 = 【随机生成】
         第二阶段 = 【EDD，OSL_2，EDD_weight】
         '''
-        # 优质解
+        # 按照工件规模去生成初始种群P，如20n
+        # 优质解 占比是1/10 P
         for gen_method_1 in self.jobs_sort_method_first:
             for gen_method_2 in self.jobs_sort_method_second:
                 self.job_assignment(gen_method_1, gen_method_2)
                 # 存储schedule，obj
-                self.inital_refset.append((
+                self.population_refset.append((
                     self.schedule, self.obj, self.job_execute_time, self.schedule_job_block))
-        self.inital_refset = sorted(self.inital_refset, key=lambda x: x[1])
-        self.inital_refset = self.inital_refset[:self.jingying_num]
-        # self.inital_refset['opt_solu'] = self.inital_refset['opt_solu'][:2]
+        self.population_refset = sorted(self.population_refset, key=lambda x: x[1])
+        self.population_refset = self.population_refset[:self.jingying_num]
+        # self.population_refset['opt_solu'] = self.population_refset['opt_solu'][:2]
 
         # 随机解
         gen_method_1 = 'random'
-        i_index = int((self.population - self.jingying_num) / 4) + 1
-        for i in range(i_index):
+        need_rabdom_num = 20 * self.config.jobs_num - len(self.population_refset)
+        # 这个记得断一下点看下
+        need_break = False
+        while True:
             for gen_method_2 in self.jobs_sort_method_second:
-                self.job_assignment(gen_method_1, gen_method_2, seed_num=i)
+                self.job_assignment(gen_method_1, gen_method_2)
                 # 存储schedule，obj
-                self.inital_refset.append(
+                self.population_refset.append(
                     (self.schedule, self.obj, self.job_execute_time, self.schedule_job_block))
-        self.inital_refset = sorted(self.inital_refset, key=lambda x: x[1])
-        self.inital_refset = self.inital_refset[:self.population]
-        # self.inital_refset['multi_solu'] = self.inital_refset['multi_solu'][:]
+                if len(self.population_refset) == 20 * self.config.jobs_num:
+                    need_break = True
+                    break
+            if need_break:
+                break
+        self.population_refset = sorted(self.population_refset, key=lambda x: x[1])
+        # self.population_refset = self.population_refset[:self.population]
+        self.bulid_reference(self.population_refset)
+        if len(self.population_refset) < 20 * self.config.jobs_num:
+            need_break = False
+            while True:
+                for gen_method_2 in self.jobs_sort_method_second:
+                    self.job_assignment(gen_method_1, gen_method_2)
+                    # 存储schedule，obj
+                    self.population_refset.append(
+                        (self.schedule, self.obj, self.job_execute_time, self.schedule_job_block))
+                    if len(self.population_refset) == 20 * self.config.jobs_num:
+                        need_break = True
+                        break
+                if need_break:
+                    break
+            self.population_refset = sorted(self.population_refset, key=lambda x: x[1])
+
+        # self.population_refset['multi_solu'] = self.population_refset['multi_solu'][:]
+
+    def bulid_reference(self,population_refset):
+        # 选择整个初始解种群P中的1/10，再乘1/3的精英解
+        self.population_refset = population_refset
+        import copy
+        elite_num = int(len(self.population_refset) * 1/10 * 1/3)
+        self.inital_refset = copy.deepcopy(self.population_refset[:elite_num])
+        self.population_refset = self.population_refset[elite_num:]     # 这个需要验证一下是否会被替代掉
+        # 多样解的构建
+        from scipy.stats import kendalltau
+
+
+        distance_list = []
+        need_remove_item = []
+        need_break = False
+        while True:
+            aver_tau_list = []
+            for item in self.population_refset:
+
+                schedule = item[0]
+                schedule_list_0 = []
+                schedule_list_1 = []
+
+                for i_machine in range(self.config.machine_num_on_stage[0]):
+                    schedule_list_0 += schedule[(0,i_machine)]
+                    schedule_list_1 += schedule[(1,i_machine)]
+
+                for i_i_item in self.inital_refset:
+                    i_i_item_schedule = i_i_item[0]
+                    i_i_item_schedule_list_0 = []
+                    i_i_item_schedule_list_1 = []
+
+                    for i_i_machine in range(self.config.machine_num_on_stage[0]):
+                        i_i_item_schedule_list_0 += i_i_item_schedule[(0, i_i_machine)]
+                        i_i_item_schedule_list_1 += i_i_item_schedule[(1, i_i_machine)]
+                    # 计算Kendall tau距离
+                    tau_0, p_value_0 = kendalltau(schedule_list_0, i_i_item_schedule_list_0)
+                    tau_1, p_value_1 = kendalltau(schedule_list_1, i_i_item_schedule_list_1)
+                    tau = (tau_0+tau_1)/2
+                    distance_list.append(tau)
+                aver_tau = sum(distance_list) / len(distance_list)
+                aver_tau_list.append(aver_tau)
+            i_index = aver_tau_list.index(min(aver_tau_list))
+            self.inital_refset.append(self.population_refset[i_index])
+            self.population_refset.remove(self.inital_refset[-1])
+            if len(self.inital_refset) ==  2 * self.config.jobs_num:
+                break
+        self.inital_refset = copy.deepcopy(self.inital_refset)
+        print(1)
+
+
+
